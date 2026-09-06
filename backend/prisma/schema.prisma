@@ -1,0 +1,941 @@
+// ==============================================================================
+// PRISMA SCHEMA: ATTENDANCE AI PLATFORM
+// Enterprise Multi-Tenant SaaS: HR + Attendance + Tasks + Payroll + AI
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------------------
+// MULTI-TENANCY & ORGANIZATIONAL HIERARCHY
+// ------------------------------------------------------------------------------
+
+model Tenant {
+  id           String       @id @default(uuid())
+  name         String
+  slug         String       @unique
+  plan         String       @default("ENTERPRISE")
+  status       TenantStatus @default(ACTIVE)
+  maxEmployees Int          @default(500)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  companies       Company[]
+  branches        Branch[]
+  departments     Department[]
+  teams           Team[]
+  designations    Designation[]
+  users           User[]
+  roles           Role[]
+  userRoles       UserRole[]
+  employees       Employee[]
+  shifts          Shift[]
+  devices         Device[]
+  cameras         Camera[]
+  attendance      AttendanceEvent[]
+  dailyAttendance DailyAttendance[]
+  leaves          Leave[]
+  projects        Project[]
+  tasks           Task[]
+  salaryStructures SalaryStructure[]
+  payrollPeriods  PayrollPeriod[]
+  payslips        Payslip[]
+  auditLogs       AuditLog[]
+  aiConversations AiConversation[]
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  EXPIRED
+}
+
+model Company {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  name               String
+  registrationNumber String?
+  taxId              String?
+  email              String?
+  phone              String?
+  address            String?
+  currency           String   @default("USD")
+  timezone           String   @default("UTC")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branches       Branch[]
+  departments    Department[]
+  employees      Employee[]
+  shifts         Shift[]
+  projects       Project[]
+  payrollPeriods PayrollPeriod[]
+
+  @@index([tenantId])
+  @@map("companies")
+}
+
+model Branch {
+  id              String   @id @default(uuid())
+  tenantId        String
+  companyId       String
+  name            String
+  code            String
+  address         String?
+  city            String?
+  country         String?
+  latitude        Float?
+  longitude       Float?
+  geofenceRadius  Float    @default(200) // in meters
+  isHeadquarters  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  departments     Department[]
+  employees       Employee[]
+  shifts          Shift[]
+  devices         Device[]
+  cameras         Camera[]
+  dailyAttendance DailyAttendance[]
+  attendanceEvents AttendanceEvent[]
+  userRoles       UserRole[]
+  projects        Project[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, companyId])
+  @@map("branches")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  branchId    String?
+  name        String
+  code        String
+  description String?
+  managerId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch    Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  teams     Team[]
+  employees Employee[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, companyId])
+  @@map("departments")
+}
+
+model Team {
+  id           String   @id @default(uuid())
+  tenantId     String
+  departmentId String
+  name         String
+  code         String
+  leaderId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  employees  Employee[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, departmentId])
+  @@map("teams")
+}
+
+model Designation {
+  id          String   @id @default(uuid())
+  tenantId    String
+  title       String
+  code        String
+  level       Int      @default(1)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("designations")
+}
+
+// ------------------------------------------------------------------------------
+// USERS, AUTHENTICATION & RBAC
+// ------------------------------------------------------------------------------
+
+model User {
+  id               String    @id @default(uuid())
+  tenantId         String
+  email            String
+  passwordHash     String
+  firstName        String
+  lastName         String
+  phone            String?
+  avatarUrl        String?
+  isActive         Boolean   @default(true)
+  isSuperAdmin     Boolean   @default(false)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  refreshTokens   RefreshToken[]
+  employee        Employee?
+  aiConversations AiConversation[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String?  // null for system default templates
+  name        String
+  description String?
+  isSystemRole Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  action      String   @unique // e.g. employee.view, attendance.create, payroll.process
+  resource    String   // e.g. employee, attendance, payroll, task, camera, reports
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  tenantId  String
+  branchId  String?
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, tenantId, branchId])
+  @@index([userId, tenantId])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ------------------------------------------------------------------------------
+// EMPLOYEE & HUMAN RESOURCES CORE
+// ------------------------------------------------------------------------------
+
+model Employee {
+  id                    String           @id @default(uuid())
+  tenantId              String
+  companyId             String
+  branchId              String
+  departmentId          String
+  teamId                String?
+  designationId         String
+  userId                String?          @unique // optional 1:1 link to User login
+  employeeCode          String
+  firstName             String
+  lastName              String
+  fatherSpouseName      String?
+  gender                Gender           @default(MALE)
+  dateOfBirth           DateTime?
+  nationalId            String?          // CNIC, SSN or Government ID
+  photoUrl              String?
+  email                 String
+  phone                 String
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  address               String?
+  joiningDate           DateTime
+  probationEndDate      DateTime?
+  terminationDate       DateTime?
+  employmentType        EmploymentType   @default(FULL_TIME)
+  status                EmployeeStatus   @default(ACTIVE)
+  shiftId               String?
+  managerId             String?
+  bankName              String?
+  bankAccountTitle      String?
+  bankAccountNumber     String?
+  iban                  String?
+  qrToken               String?          @unique // unique cryptographic signed token for QR punch
+  barcode               String?          @unique // mapped barcode
+  faceEmbedding         String?          // base64 or vector reference for biometric verification
+  voiceEmbedding        String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch           Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  department       Department        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  team             Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  designation      Designation       @relation(fields: [designationId], references: [id], onDelete: Cascade)
+  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shift            Shift?            @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  manager          Employee?         @relation("ManagerSubordinates", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates     Employee[]        @relation("ManagerSubordinates")
+  history          EmployeeHistory[]
+  documents        EmployeeDocument[]
+  attendanceEvents AttendanceEvent[]
+  dailyAttendance  DailyAttendance[]
+  leaves           Leave[]
+  taskAssignments  TaskAssignee[]
+  salaryStructure  SalaryStructure?
+  payslips         Payslip[]
+
+  @@unique([tenantId, employeeCode])
+  @@index([tenantId, branchId])
+  @@index([tenantId, departmentId])
+  @@index([tenantId, status])
+  @@map("employees")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  DAILY_WAGE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  PROBATION
+  ON_LEAVE
+  SUSPENDED
+  RESIGNED
+  TERMINATED
+  RETIRED
+}
+
+model EmployeeHistory {
+  id            String    @id @default(uuid())
+  tenantId      String
+  employeeId    String
+  eventType     String    // HIRED, PROMOTED, TRANSFERRED, STATUS_CHANGE, SALARY_CHANGE
+  previousValue String?
+  newValue      String?
+  effectiveDate DateTime  @default(now())
+  remarks       String?
+  createdById   String?
+  createdAt     DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId])
+  @@map("employee_history")
+}
+
+model EmployeeDocument {
+  id           String    @id @default(uuid())
+  tenantId     String
+  employeeId   String
+  title        String
+  documentType String    // ID_CARD, CONTRACT, CERTIFICATE, MEDICAL, RESUME
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  expiryDate   DateTime?
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId])
+  @@map("employee_documents")
+}
+
+// ------------------------------------------------------------------------------
+// SHIFTS, ATTENDANCE ENGINE & LEAVE MANAGEMENT
+// ------------------------------------------------------------------------------
+
+model Shift {
+  id                       String   @id @default(uuid())
+  tenantId                 String
+  companyId                String
+  branchId                 String?
+  name                     String
+  code                     String
+  startTime                String   // "09:00" (HH:mm)
+  endTime                  String   // "17:00"
+  gracePeriodMinutes       Int      @default(15)
+  lateThresholdMinutes     Int      @default(30)
+  earlyExitThresholdMinutes Int     @default(15)
+  halfDayMinutes           Int      @default(240) // 4 hours
+  fullDayMinutes           Int      @default(480) // 8 hours
+  isNightShift             Boolean  @default(false)
+  isFlexible               Boolean  @default(false)
+  workDays                 String   @default("1,2,3,4,5") // Mon=1, Sun=7
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch          Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  employees       Employee[]
+  dailyAttendance DailyAttendance[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("shifts")
+}
+
+model AttendanceEvent {
+  id                 String           @id @default(uuid())
+  tenantId           String
+  employeeId         String
+  eventType          AttendanceAction // CHECK_IN, CHECK_OUT, BREAK_START, BREAK_END, etc.
+  source             AttendanceSource // CAMERA, FACE, QR, BARCODE, VOICE, MOBILE, WEB, MANUAL
+  timestamp          DateTime         @default(now())
+  deviceId           String?
+  branchId           String?
+  latitude           Float?
+  longitude          Float?
+  confidenceScore    Float?           // For Face / Voice biometric match
+  snapshotUrl        String?          // Snapshot link if captured by camera/webcam
+  verificationMethod String?          // e.g. "PIN", "FACE_MODEL_V2", "SIGNED_QR"
+  createdById        String?          // User ID if manual entry
+  isSuspicious       Boolean          @default(false)
+  remarks            String?
+  createdAt          DateTime         @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  device   Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, employeeId, timestamp])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, source])
+  @@map("attendance_events")
+}
+
+enum AttendanceAction {
+  CHECK_IN
+  CHECK_OUT
+  BREAK_START
+  BREAK_END
+  TEMPORARY_OUT
+  TEMPORARY_IN
+  FIELD_VISIT
+  OFFICIAL_DUTY
+  OVERTIME_START
+  OVERTIME_END
+}
+
+enum AttendanceSource {
+  MANUAL
+  QR
+  BARCODE
+  CAMERA
+  WEBCAM
+  FACE
+  VOICE
+  MOBILE
+  WEB
+  BIOMETRIC_DEVICE
+}
+
+model DailyAttendance {
+  id               String           @id @default(uuid())
+  tenantId         String
+  employeeId       String
+  branchId         String
+  shiftId          String?
+  date             DateTime         // Stripped to YYYY-MM-DD
+  firstIn          DateTime?
+  lastOut          DateTime?
+  totalWorkMinutes Int              @default(0)
+  totalBreakMinutes Int             @default(0)
+  lateMinutes      Int              @default(0)
+  earlyExitMinutes Int              @default(0)
+  overtimeMinutes  Int              @default(0)
+  status           DailyStatus      @default(ABSENT)
+  isApproved       Boolean          @default(true)
+  approvedById     String?
+  remarks          String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  shift    Shift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, employeeId, date])
+  @@index([tenantId, date])
+  @@index([tenantId, branchId, date])
+  @@index([tenantId, status])
+  @@map("daily_attendance")
+}
+
+enum DailyStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+  WEEKEND
+}
+
+model Leave {
+  id              String      @id @default(uuid())
+  tenantId        String
+  employeeId      String
+  leaveType       LeaveType
+  startDate       DateTime
+  endDate         DateTime
+  totalDays       Float
+  isHalfDay       Boolean     @default(false)
+  reason          String
+  status          LeaveStatus @default(PENDING)
+  approvedById    String?
+  rejectionReason String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@map("leaves")
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  CASUAL
+  UNPAID
+  MATERNITY
+  PATERNITY
+  COMPENSATORY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ------------------------------------------------------------------------------
+// DEVICES & IP CAMERAS
+// ------------------------------------------------------------------------------
+
+model Device {
+  id                  String       @id @default(uuid())
+  tenantId            String
+  branchId            String
+  name                String
+  deviceCode          String
+  deviceType          DeviceType
+  tokenHash           String       @unique
+  ipAddress           String?
+  status              DeviceStatus @default(ONLINE)
+  lastHeartbeat       DateTime?
+  firmwareVersion     String?
+  locationDescription String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch           Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  cameras          Camera[]
+  attendanceEvents AttendanceEvent[]
+
+  @@unique([tenantId, deviceCode])
+  @@index([tenantId, branchId])
+  @@map("devices")
+}
+
+enum DeviceType {
+  CAMERA_GATEWAY
+  QR_SCANNER
+  BARCODE_SCANNER
+  WEBCAM
+  MOBILE
+  WEB
+  OTHER
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+  MAINTENANCE
+}
+
+model Camera {
+  id               String       @id @default(uuid())
+  tenantId         String
+  branchId         String
+  deviceId         String?      // Associated Local Gateway if applicable
+  name             String
+  rtspUrlEncrypted String       // Encrypted RTSP stream connection
+  cameraType       CameraType   @default(ENTRY)
+  direction        Direction    @default(IN)
+  resolution       String?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, branchId])
+  @@map("cameras")
+}
+
+enum CameraType {
+  ENTRY
+  EXIT
+  DOOR
+  GATE
+  OFFICE
+}
+
+enum Direction {
+  IN
+  OUT
+  BOTH
+}
+
+// ------------------------------------------------------------------------------
+// TASKS & PROJECTS
+// ------------------------------------------------------------------------------
+
+model Project {
+  id          String        @id @default(uuid())
+  tenantId    String
+  companyId   String
+  branchId    String?
+  name        String
+  code        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      ProjectStatus @default(PLANNED)
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch  Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  tasks   Task[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, companyId])
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  tenantId       String
+  projectId      String?
+  title          String
+  description    String?
+  priority       TaskPriority @default(NORMAL)
+  status         TaskStatus   @default(BACKLOG)
+  dueDate        DateTime?
+  startDate      DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  creatorId      String
+  parentTaskId   String?
+  isRecurring    Boolean      @default(false)
+  recurrenceRule String?      // cron or standard rule: DAILY, WEEKLY, MONTHLY
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project    Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  parentTask Task?          @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subTasks   Task[]         @relation("SubTasks")
+  assignees  TaskAssignee[]
+  comments   TaskComment[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, priority])
+  @@index([tenantId, projectId])
+  @@map("tasks")
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+enum TaskStatus {
+  BACKLOG
+  PLANNED
+  IN_PROGRESS
+  WAITING
+  REVIEW
+  APPROVED
+  COMPLETED
+  CANCELLED
+}
+
+model TaskAssignee {
+  taskId     String
+  employeeId String
+  assignedAt DateTime @default(now())
+
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@map("task_assignees")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+// ------------------------------------------------------------------------------
+// PAYROLL MANAGEMENT & SALARY STRUCTURE
+// ------------------------------------------------------------------------------
+
+model SalaryStructure {
+  id                    String   @id @default(uuid())
+  tenantId              String
+  employeeId            String   @unique
+  basicSalary           Float
+  houseAllowance        Float    @default(0)
+  transportAllowance    Float    @default(0)
+  medicalAllowance      Float    @default(0)
+  otherAllowances       Float    @default(0)
+  taxDeductionPercent   Float    @default(0)
+  currency              String   @default("USD")
+  effectiveDate         DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("salary_structures")
+}
+
+model PayrollPeriod {
+  id              String        @id @default(uuid())
+  tenantId        String
+  companyId       String
+  name            String
+  periodType      PeriodType    @default(MONTHLY)
+  startDate       DateTime
+  endDate         DateTime
+  status          PayrollStatus @default(DRAFT)
+  totalGross      Float         @default(0)
+  totalDeductions Float         @default(0)
+  totalNet        Float         @default(0)
+  lockedAt        DateTime?
+  approvedById    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payslips Payslip[]
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, status])
+  @@map("payroll_periods")
+}
+
+enum PeriodType {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  DAILY
+}
+
+enum PayrollStatus {
+  DRAFT
+  CALCULATING
+  REVIEW
+  APPROVED
+  LOCKED
+}
+
+model Payslip {
+  id              String        @id @default(uuid())
+  tenantId        String
+  payrollPeriodId String
+  employeeId      String
+  basicSalary     Float
+  allowancesTotal Float         @default(0)
+  deductionsTotal Float         @default(0)
+  overtimePay     Float         @default(0)
+  netSalary       Float
+  status          PayslipStatus @default(DRAFT)
+  pdfUrl          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payrollPeriod PayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  employee      Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollPeriodId, employeeId])
+  @@index([tenantId, employeeId])
+  @@map("payslips")
+}
+
+enum PayslipStatus {
+  DRAFT
+  APPROVED
+  PAID
+}
+
+// ------------------------------------------------------------------------------
+// AUDIT LOGS & AI CONVERSATIONS
+// ------------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  actorId   String?  // null if system event
+  action    String   // e.g. EMPLOYEE_CREATE, ATTENDANCE_PUNCH, PAYROLL_LOCK
+  entity    String   // e.g. Employee, AttendanceEvent, PayrollPeriod
+  entityId  String?
+  oldValue  String?  // Sanitized JSON snapshot
+  newValue  String?  // Sanitized JSON snapshot
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entity, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+model AiConversation {
+  id        String      @id @default(uuid())
+  tenantId  String
+  userId    String
+  title     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([tenantId, userId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String    @id @default(uuid())
+  conversationId String
+  role           String    // SYSTEM, USER, ASSISTANT, TOOL
+  content        String
+  toolCalls      String?   // JSON representation of function calls
+  toolResults    String?   // JSON result of executed tool
+  createdAt      DateTime  @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("ai_messages")
+}
