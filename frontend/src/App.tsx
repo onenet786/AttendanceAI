@@ -182,7 +182,7 @@ const INITIAL_TIMESHEETS: TimesheetRecord[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'audit'>('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [events, setEvents] = useState<AttendanceEvent[]>(INITIAL_EVENTS);
@@ -229,6 +229,15 @@ export default function App() {
   const [enrollmentAngle, setEnrollmentAngle] = useState<'FRONT' | 'LEFT' | 'RIGHT'>('FRONT');
   const [enrollmentProgress, setEnrollmentProgress] = useState<number>(0);
   const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
+
+  // Voice Command & Audio Assistant State (Phase 5)
+  const [voiceEmployeeId, setVoiceEmployeeId] = useState<string>('1');
+  const [voiceRecording, setVoiceRecording] = useState<boolean>(false);
+  const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
+  const [voiceResponse, setVoiceResponse] = useState<string | null>(null);
+  const [voiceConfidence, setVoiceConfidence] = useState<number | null>(null);
+  const [voiceIntent, setVoiceIntent] = useState<string | null>(null);
+  const [isVoiceCalibrating, setIsVoiceCalibrating] = useState<boolean>(false);
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -428,6 +437,68 @@ export default function App() {
     }
   };
 
+  // Live Voice Command & Speech Attendance (Phase 5)
+  const handleTriggerVoiceCommand = (presetPhrase?: string) => {
+    const phrase = presetPhrase || 'Clock me in for today';
+    setVoiceRecording(true);
+    setVoiceTranscript('Listening & streaming acoustic audio to Whisper STT...');
+    setVoiceResponse(null);
+
+    setTimeout(() => {
+      setVoiceRecording(false);
+      setVoiceTranscript(phrase);
+
+      const emp = employees.find((e) => e.id === voiceEmployeeId) || employees[0];
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      const lower = phrase.toLowerCase();
+      let intent = 'CHECK_IN';
+      let spoken = `Hello ${emp.name}, I have verified your acoustic voiceprint (96.4% confidence) and checked you in at ${timeStr}. Have a great workday!`;
+
+      if (lower.includes('out') || lower.includes('leave') || lower.includes('wrap')) {
+        intent = 'CHECK_OUT';
+        spoken = `Goodbye ${emp.name}, I have clocked you out at ${timeStr}. Your worked hours have been updated in your timesheet.`;
+      } else if (lower.includes('lunch') || lower.includes('break')) {
+        if (lower.includes('back') || lower.includes('end')) {
+          intent = 'BREAK_END';
+          spoken = `Welcome back ${emp.name}, your break period has been concluded at ${timeStr}.`;
+        } else {
+          intent = 'BREAK_START';
+          spoken = `Enjoy your break ${emp.name}, break start time logged at ${timeStr}.`;
+        }
+      } else if (lower.includes('hours')) {
+        intent = 'HOURS_QUERY';
+        spoken = `Hello ${emp.name}, you have completed 37.5 working hours this week with 1.5 hours of approved overtime.`;
+      } else if (lower.includes('status')) {
+        intent = 'STATUS_QUERY';
+        spoken = `Hello ${emp.name}, you are currently registered as PRESENT since 09:00 AM. Shift compliance is 100%.`;
+      } else if (lower.includes('absent')) {
+        intent = 'TEAM_QUERY';
+        spoken = `Today in the Lahore Head Office branch, 14 staff members are scheduled: 13 are present, 2 are late, and 1 is on approved leave.`;
+      }
+
+      setVoiceIntent(intent);
+      setVoiceConfidence(0.964);
+      setVoiceResponse(spoken);
+
+      if (intent === 'CHECK_IN' || intent === 'CHECK_OUT') {
+        const newEvent: AttendanceEvent = {
+          id: `voice-${Date.now()}`,
+          employeeName: emp.name,
+          employeeCode: emp.code,
+          eventType: intent as any,
+          source: 'VOICE',
+          time: `${timeStr} [Voice AI Command]`,
+          branch: emp.branch,
+          photo: emp.photo,
+          confidence: 0.964,
+        };
+        setEvents([newEvent, ...events]);
+      }
+    }, 1200);
+  };
+
   const getSourceIcon = (source: AttendanceEvent['source']) => {
     switch (source) {
       case 'CAMERA':
@@ -566,6 +637,27 @@ export default function App() {
           >
             <Camera style={{ width: '18px', height: '18px' }} />
             <span>CCTV & Edge Gateways</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('voice')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              background: activeTab === 'voice' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: activeTab === 'voice' ? '#818cf8' : 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <Mic style={{ width: '18px', height: '18px' }} />
+            <span>Voice Attendance & AI</span>
           </button>
 
           <button
@@ -1587,6 +1679,396 @@ export default function App() {
                 <ScanLine className="w-4 h-4" />
                 <span>Simulate Terminal Scan Punch</span>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* VOICE-BASED ATTENDANCE & AUDIO ASSISTANT TAB (PHASE 5) */}
+        {activeTab === 'voice' && (
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(244, 63, 94, 0.15)', borderRadius: '10px', color: '#fb7185' }}>
+                    <Mic style={{ width: '24px', height: '24px' }} />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Voice Attendance & Speech AI Engine</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
+                      Hands-free acoustic MFCC biometric verification with zero-latency Whisper STT and Natural Language Understanding (NLU).
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Activity style={{ width: '13px', height: '13px' }} />
+                  <span>MFCC-128 Matcher: Active</span>
+                </span>
+                <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles style={{ width: '13px', height: '13px' }} />
+                  <span>Whisper STT: Streaming</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Main Interactive Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+              {/* Left Column: Interactive Terminal & Mic Visualizer */}
+              <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Interactive Voice Terminal</h3>
+                  <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '4px 8px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                    Sample Rate: 16kHz Mono
+                  </span>
+                </div>
+
+                {/* Candidate Employee Selector */}
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Active Speaking Personnel
+                  </label>
+                  <select
+                    value={voiceEmployeeId}
+                    onChange={(e) => setVoiceEmployeeId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      color: '#fff',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.code}) — {emp.designation} [{emp.branch}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Pulsing Mic Visualizer */}
+                <div
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '16px',
+                    padding: '32px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    border: voiceRecording ? '1px solid #f43f5e' : '1px solid var(--border-subtle)',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Glowing pulsing microphone button */}
+                  <button
+                    onClick={() => handleTriggerVoiceCommand()}
+                    disabled={voiceRecording}
+                    style={{
+                      width: '88px',
+                      height: '88px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      cursor: voiceRecording ? 'default' : 'pointer',
+                      background: voiceRecording
+                        ? 'linear-gradient(135deg, #f43f5e, #e11d48)'
+                        : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: voiceRecording
+                        ? '0 0 35px rgba(244, 63, 94, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.4)'
+                        : '0 0 25px rgba(99, 102, 241, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      transition: 'all 0.3s ease',
+                      transform: voiceRecording ? 'scale(1.08)' : 'scale(1)',
+                    }}
+                  >
+                    <Mic style={{ width: '36px', height: '36px' }} />
+                  </button>
+
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: voiceRecording ? '#fb7185' : '#fff' }}>
+                      {voiceRecording ? 'Listening & Extracting Acoustic Features...' : 'Click to Speak or Choose Command Below'}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      {voiceRecording ? 'Extracting 128-dim MFCC audio coefficients' : 'Auto-detects intent, checks in/out & queries status'}
+                    </div>
+                  </div>
+
+                  {/* Equalizer Audio Frequency Spectrum Bars */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '36px', marginTop: '6px' }}>
+                    {[16, 28, 12, 32, 24, 38, 20, 30, 36, 22, 34, 18, 26, 14].map((h, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: '4px',
+                          height: voiceRecording ? `${Math.max(8, (h * (i % 2 === 0 ? 1.2 : 0.8)))}px` : '6px',
+                          background: voiceRecording ? '#fb7185' : 'rgba(255, 255, 255, 0.2)',
+                          borderRadius: '2px',
+                          transition: 'height 0.2s ease',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preset Voice Utterance Triggers */}
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>
+                    Quick Simulated Voice Utterances (Click to Dispatch)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {[
+                      { label: 'Clock me in for today', intent: 'CHECK_IN', color: '#10b981' },
+                      { label: 'Clock me out, wrapping up shift', intent: 'CHECK_OUT', color: '#f59e0b' },
+                      { label: 'Going on 30-min lunch break', intent: 'BREAK_START', color: '#38bdf8' },
+                      { label: 'Back from lunch break', intent: 'BREAK_END', color: '#818cf8' },
+                      { label: 'How many hours did I work this week?', intent: 'HOURS_QUERY', color: '#a855f7' },
+                      { label: 'What is my attendance status today?', intent: 'STATUS_QUERY', color: '#ec4899' },
+                      { label: 'Who is absent in the office right now?', intent: 'TEAM_QUERY', color: '#f43f5e' },
+                    ].map((cmd, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleTriggerVoiceCommand(cmd.label)}
+                        disabled={voiceRecording}
+                        style={{
+                          background: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '6px',
+                          padding: '7px 12px',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.78rem',
+                          cursor: voiceRecording ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = cmd.color)}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cmd.color }} />
+                        <span>"{cmd.label}"</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Voiceprint Calibration Card */}
+                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>Biometric Voiceprint Enrollment</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Calibrate 128-dim spectral MFCC template for speaker authentication.
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsVoiceCalibrating(true);
+                        setTimeout(() => {
+                          setIsVoiceCalibrating(false);
+                          setVoiceResponse('Voiceprint successfully calibrated! 128-dim MFCC acoustic vector registered with 98.6% quality score.');
+                        }, 1200);
+                      }}
+                      disabled={isVoiceCalibrating}
+                      style={{
+                        background: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        color: '#a5b4fc',
+                        borderRadius: '6px',
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: isVoiceCalibrating ? 'default' : 'pointer',
+                      }}
+                    >
+                      {isVoiceCalibrating ? 'Calibrating...' : 'Enroll Voiceprint'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Real-Time Acoustic & NLU Stream */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Acoustic & NLP Analysis Card */}
+                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Acoustic & Intent Parsing Stream</h3>
+                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                      Latency: ~42ms
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                      Speech Transcript (Whisper STT Output)
+                    </label>
+                    <div
+                      style={{
+                        marginTop: '6px',
+                        background: 'var(--bg-elevated)',
+                        borderRadius: '8px',
+                        padding: '14px',
+                        fontSize: '0.9rem',
+                        color: voiceTranscript ? '#fff' : 'var(--text-muted)',
+                        fontStyle: voiceTranscript ? 'normal' : 'italic',
+                        border: '1px solid var(--border-subtle)',
+                        minHeight: '52px',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      {voiceTranscript || 'Waiting for spoken audio input or preset trigger...'}
+                    </div>
+                  </div>
+
+                  {/* Telemetry Metrics */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Acoustic Similarity</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: voiceConfidence ? '#10b981' : 'var(--text-secondary)', marginTop: '4px' }}>
+                        {voiceConfidence ? `${(voiceConfidence * 100).toFixed(1)}%` : '—'}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Threshold: ≥ 80.0%</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Classified Intent</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#818cf8', marginTop: '6px' }}>
+                        {voiceIntent || 'IDLE'}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Zero-Latency NLP</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-elevated)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Ingress Source</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fb7185', marginTop: '6px' }}>
+                        VOICE_MIC
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Central Engine</div>
+                    </div>
+                  </div>
+
+                  {/* Spoken AI Assistant Response */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                      AI Spoken Response (TTS Synthesis)
+                    </label>
+                    <div
+                      style={{
+                        marginTop: '6px',
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        borderRadius: '10px',
+                        padding: '16px',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <div style={{ padding: '6px', background: 'rgba(99, 102, 241, 0.2)', borderRadius: '8px', color: '#a5b4fc', flexShrink: 0 }}>
+                        <Sparkles style={{ width: '18px', height: '18px' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.85rem', color: '#e0e7ff', lineHeight: 1.5 }}>
+                          {voiceResponse ||
+                            'Awaiting voice input. The AI Voice Assistant will formulate a personalized natural spoken response and trigger the attendance timesheet engine automatically.'}
+                        </div>
+                        {voiceResponse && (
+                          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#10b981' }}>
+                            <CheckCircle2 style={{ width: '14px', height: '14px' }} />
+                            <span>Executed in Timesheet Calculation Engine</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voice Architecture Specifications Card */}
+                <div className="glass-panel" style={{ padding: '20px' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', marginBottom: '10px' }}>
+                    Phase 5 Voice Engine Architecture
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Acoustic Feature Extraction</span>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>128-dimensional MFCC vectors</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Biometric Comparison Metric</span>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>Normalized Cosine Similarity (Threshold 0.80)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Natural Language Grammar</span>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>Regex + Slot Filling (EN / UR)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Central Engine Integration</span>
+                      <span style={{ color: '#10b981', fontWeight: 500 }}>AttendanceService.recordPunch(source='VOICE')</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Voice Events Stream */}
+            <div className="glass-panel" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Recent Voice-Initiated Attendance Punches</h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Live Ingress Stream</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {events
+                  .filter((e) => e.source === 'VOICE')
+                  .slice(0, 5)
+                  .map((ev) => (
+                    <div
+                      key={ev.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        background: 'var(--bg-elevated)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ padding: '6px', background: 'rgba(244, 63, 94, 0.15)', borderRadius: '8px', color: '#fb7185' }}>
+                          <Mic style={{ width: '16px', height: '16px' }} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>{ev.employeeName} ({ev.employeeCode})</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{ev.branch} • {ev.time}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span className={`badge ${ev.eventType === 'CHECK_IN' ? 'badge-success' : 'badge-warning'}`}>
+                          {ev.eventType}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>
+                          {(ev.confidence ? ev.confidence * 100 : 96.4).toFixed(1)}% Voice Match
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                {events.filter((e) => e.source === 'VOICE').length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No voice attendance punches logged yet in this session. Click the microphone or choose a preset above to log one!
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

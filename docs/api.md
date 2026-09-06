@@ -134,4 +134,17 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 * `POST /api/v1/cameras/gateway/match-stream` - Real-time stream detection ingress from Edge Gateway (`X-Gateway-Token`)
 * `POST /api/v1/cameras/gateway/sync-batch` - Ingest offline buffered punches from Edge Gateway SQLite queue
 
+---
+
+## 8. Phase 5 Voice-Based Attendance & Speech AI (`/api/v1/voice`)
+
+### Biometric Voiceprint Enrollment & Verification
+* `POST /api/v1/voice/enroll` - Enroll normalized 128-dimensional acoustic MFCC voiceprint vector for employee
+* `POST /api/v1/voice/verify` - Cosine similarity comparison between incoming audio feature vector and employee profile (threshold $\ge 0.80$)
+
+### Voice Attendance & Natural Language Intent Processing
+* `POST /api/v1/voice/command` - Primary multimodal endpoint accepting raw audio/speech transcript + optional acoustic vector. Parses natural language intent (`CHECK_IN`, `CHECK_OUT`, `BREAK_START`, `BREAK_END`, `HOURS_QUERY`, `STATUS_QUERY`, `TEAM_QUERY`), executes biometric validation, dispatches into Central Attendance Engine (`source: 'VOICE'`), and returns natural spoken audio response text.
+* `POST /api/v1/voice/parse-intent` - Lightweight testing endpoint to classify natural language intent and slots without triggering attendance mutations.
+
+
 

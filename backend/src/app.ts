@@ -18,6 +18,7 @@ import auditRoutes from './modules/audit/audit.routes.js';
 import devicesRoutes from './modules/devices/devices.routes.js';
 import biometricsRoutes from './modules/biometrics/face.routes.js';
 import camerasRoutes from './modules/cameras/cameras.routes.js';
+import voiceRoutes from './modules/voice/voice.routes.js';
 
 const app = express();
 
@@ -161,6 +162,7 @@ app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/devices', devicesRoutes);
 app.use('/api/v1/biometrics', biometricsRoutes);
 app.use('/api/v1/cameras', camerasRoutes);
+app.use('/api/v1/voice', voiceRoutes);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {
