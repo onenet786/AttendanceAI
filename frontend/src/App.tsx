@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users,
   Clock,
@@ -203,6 +203,23 @@ export default function App() {
   const [corrTime, setCorrTime] = useState<string>('09:00');
   const [corrReason, setCorrReason] = useState<string>('Biometric terminal offline in morning');
 
+  // Digital ID Badge Modal State (Phase 3)
+  const [badgeEmployee, setBadgeEmployee] = useState<Employee | null>(null);
+  const [badgeMode, setBadgeMode] = useState<'ROTATING' | 'PERMANENT' | 'BARCODE'>('ROTATING');
+  const [rotatingTimer, setRotatingTimer] = useState<number>(42); // Countdown seconds
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRotatingTimer((prev) => (prev <= 1 ? 45 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Terminal Hardware Simulator State (Phase 3)
+  const [selectedTerminal, setSelectedTerminal] = useState<string>('TERM-LHR-01');
+  const [scanType, setScanType] = useState<'ROTATING_QR' | 'PERM_QR' | 'BARCODE'>('ROTATING_QR');
+  const [terminalScanFeedback, setTerminalScanFeedback] = useState<string | null>(null);
+
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
     const matchesBranch = selectedBranch === 'ALL' || emp.branch.toLowerCase().includes(selectedBranch.toLowerCase());
@@ -306,6 +323,37 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Hardware Terminal Scanner Execution (Phase 3)
+  const handleTerminalScan = () => {
+    const emp = employees.find((e) => e.id === simEmployeeId) || employees[0];
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const source = scanType === 'BARCODE' ? 'BARCODE' : 'QR';
+    const scanLabel =
+      scanType === 'ROTATING_QR'
+        ? 'Dynamic Rotating QR (HMAC Verified)'
+        : scanType === 'PERM_QR'
+        ? 'Permanent Badge QR'
+        : 'Code128 Barcode';
+
+    const newEvent: AttendanceEvent = {
+      id: `term-scan-${Date.now()}`,
+      employeeName: emp.name,
+      employeeCode: emp.code,
+      eventType: 'CHECK_IN',
+      source,
+      time: `${timeStr} [${selectedTerminal}]`,
+      branch: emp.branch,
+      photo: emp.photo,
+      confidence: 1.0,
+    };
+
+    setEvents([newEvent, ...events]);
+    setTerminalScanFeedback(`Hardware Scan Success: ${emp.name} punched IN via ${scanLabel} on terminal ${selectedTerminal}.`);
+    setTimeout(() => setTerminalScanFeedback(null), 5000);
   };
 
   const getSourceIcon = (source: AttendanceEvent['source']) => {
@@ -1098,15 +1146,16 @@ export default function App() {
                         </span>
                       </td>
                       <td style={{ padding: '14px 20px' }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <span title="Signed QR Token Available" style={{ padding: '4px 6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '4px', color: '#818cf8', fontSize: '0.7rem' }}>
-                            QR
+                        <div
+                          style={{ display: 'flex', gap: '6px', cursor: 'pointer' }}
+                          onClick={() => setBadgeEmployee(emp)}
+                          title="Click to view Digital ID Card & Rotating QR"
+                        >
+                          <span style={{ padding: '4px 8px', background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '4px', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600 }}>
+                            QR Card
                           </span>
-                          <span title="Barcode Enrolled" style={{ padding: '4px 6px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '4px', color: '#fbbf24', fontSize: '0.7rem' }}>
-                            BAR
-                          </span>
-                          <span title="Biometric Vector Ready" style={{ padding: '4px 6px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '4px', color: '#34d399', fontSize: '0.7rem' }}>
-                            FACE
+                          <span style={{ padding: '4px 8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '4px', color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600 }}>
+                            Barcode
                           </span>
                         </div>
                       </td>
@@ -1176,6 +1225,107 @@ export default function App() {
                   <div><strong>Heartbeat:</strong> 12s ago</div>
                 </div>
               </div>
+
+              <div className="glass-panel" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Layers style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Warehouse USB Barcode Wedge</h3>
+                  </div>
+                  <span className="badge badge-present">ONLINE</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div><strong>Branch:</strong> Lahore Head Office</div>
+                  <div><strong>Device Type:</strong> USB HID POS Barcode Scanner</div>
+                  <div><strong>Token Auth:</strong> Verified via X-Device-Token</div>
+                  <div><strong>Heartbeat:</strong> 8s ago</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hardware Scanner Ingress Simulator */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <ScanLine style={{ width: '22px', height: '22px', color: 'var(--accent-primary)' }} />
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Hardware Terminal Ingress Simulator</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      Simulate a live physical scanner (Turnstile Kiosk or Barcode Reader) sending a punch event with device token authentication.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {terminalScanFeedback && (
+                <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#a5b4fc', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 500 }}>
+                  {terminalScanFeedback}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Active Terminal</label>
+                  <select
+                    value={selectedTerminal}
+                    onChange={(e) => setSelectedTerminal(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-elevated)', color: '#fff', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '8px 12px', fontSize: '0.85rem' }}
+                  >
+                    <option value="TERM-LHR-01">Turnstile QR Kiosk 1 (LHR-01)</option>
+                    <option value="TERM-ISB-01">Lobby Entry Terminal (ISB-01)</option>
+                    <option value="BAR-WH-02">Warehouse Barcode Scanner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Hardware Scan Mode</label>
+                  <select
+                    value={scanType}
+                    onChange={(e) => setScanType(e.target.value as any)}
+                    style={{ width: '100%', background: 'var(--bg-elevated)', color: '#fff', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '8px 12px', fontSize: '0.85rem' }}
+                  >
+                    <option value="ROTATING_QR">Dynamic Rotating QR (Anti-Replay Enabled)</option>
+                    <option value="PERM_QR">Permanent Employee Badge QR</option>
+                    <option value="BARCODE">Code128 Barcode Scanner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Simulated Employee Badge</label>
+                  <select
+                    value={simEmployeeId}
+                    onChange={(e) => setSimEmployeeId(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-elevated)', color: '#fff', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '8px 12px', fontSize: '0.85rem' }}
+                  >
+                    {employees.map((e) => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.code})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleTerminalScan}
+                style={{
+                  alignSelf: 'flex-start',
+                  background: 'var(--accent-gradient)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                  marginTop: '4px',
+                }}
+              >
+                <ScanLine className="w-4 h-4" />
+                <span>Simulate Terminal Scan Punch</span>
+              </button>
             </div>
           </div>
         )}
@@ -1385,6 +1535,371 @@ export default function App() {
                   Apply & Recalculate
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DIGITAL ID CARD & ROTATING QR BADGE MODAL (Phase 3) */}
+      {badgeEmployee && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 7, 15, 0.82)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setBadgeEmployee(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(145deg, #16192b 0%, #0d0f1d 100%)',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '460px',
+              padding: '28px',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              position: 'relative',
+            }}
+          >
+            {/* Header / Security Chip */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck style={{ width: '22px', height: '22px', color: 'var(--accent-primary)' }} />
+                <div>
+                  <div style={{ fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                    ENTERPRISE PASS
+                  </div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
+                    Digital Identity & Credential
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setBadgeEmployee(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                <X style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+
+            {/* Employee Profile Preview */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '14px',
+              }}
+            >
+              <img
+                src={badgeEmployee.photo}
+                alt={badgeEmployee.name}
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid var(--accent-primary)',
+                  boxShadow: '0 0 12px rgba(99, 102, 241, 0.4)',
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>{badgeEmployee.name}</h4>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', borderRadius: '4px', fontWeight: 600 }}>
+                    {badgeEmployee.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  {badgeEmployee.designation} • {badgeEmployee.department}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Code: <strong style={{ color: '#fff' }}>{badgeEmployee.code}</strong> | {badgeEmployee.branch}
+                </div>
+              </div>
+            </div>
+
+            {/* Credential Mode Selector */}
+            <div style={{ display: 'flex', background: 'var(--bg-elevated)', borderRadius: '10px', padding: '4px', gap: '4px' }}>
+              {(['ROTATING', 'PERMANENT', 'BARCODE'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setBadgeMode(mode)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 6px',
+                    borderRadius: '7px',
+                    border: 'none',
+                    background: badgeMode === mode ? 'var(--accent-gradient)' : 'transparent',
+                    color: badgeMode === mode ? '#fff' : 'var(--text-secondary)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {mode === 'ROTATING' ? 'Rotating QR' : mode === 'PERMANENT' ? 'Static Badge' : 'Barcode 128'}
+                </button>
+              ))}
+            </div>
+
+            {/* Credential Visual Display Area */}
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              }}
+            >
+              {badgeMode === 'ROTATING' && (
+                <>
+                  <div
+                    style={{
+                      width: '180px',
+                      height: '180px',
+                      background: '#0f172a',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
+                    }}
+                  >
+                    <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
+                      <rect x="5" y="5" width="26" height="26" rx="4" fill="#6366f1" />
+                      <rect x="9" y="9" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="13" y="13" width="10" height="10" rx="1" fill="#818cf8" />
+
+                      <rect x="69" y="5" width="26" height="26" rx="4" fill="#6366f1" />
+                      <rect x="73" y="9" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="77" y="13" width="10" height="10" rx="1" fill="#818cf8" />
+
+                      <rect x="5" y="69" width="26" height="26" rx="4" fill="#6366f1" />
+                      <rect x="9" y="73" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="13" y="77" width="10" height="10" rx="1" fill="#818cf8" />
+
+                      <rect x="37" y="8" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="47" y="8" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="57" y="8" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="37" y="18" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="57" y="18" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="37" y="28" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="47" y="28" width="6" height="6" fill="#c7d2fe" />
+
+                      <rect x="8" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="18" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="28" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="8" y="47" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="18" y="57" width="6" height="6" fill="#c7d2fe" />
+
+                      <rect x="42" y="42" width="16" height="16" rx="3" fill="#a855f7" />
+                      <rect x="46" y="46" width="8" height="8" rx="1" fill="#ffffff" />
+
+                      <rect x="68" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="78" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="88" y="37" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="68" y="47" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="88" y="57" width="6" height="6" fill="#c7d2fe" />
+
+                      <rect x="37" y="68" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="47" y="68" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="57" y="68" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="37" y="78" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="57" y="88" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="68" y="78" width="6" height="6" fill="#c7d2fe" />
+                      <rect x="78" y="88" width="6" height="6" fill="#c7d2fe" />
+                    </svg>
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        background: 'rgba(99, 102, 241, 0.9)',
+                        color: '#fff',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      HMAC-SHA256
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e293b', fontSize: '0.85rem' }}>
+                    <div
+                      style={{
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        boxShadow: '0 0 8px #10b981',
+                      }}
+                    />
+                    <span>
+                      Token refreshes in <strong style={{ color: '#4f46e5' }}>{rotatingTimer}s</strong>
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
+                    Anti-Replay Nonce active. Screenshots expire automatically.
+                  </div>
+                </>
+              )}
+
+              {badgeMode === 'PERMANENT' && (
+                <>
+                  <div
+                    style={{
+                      width: '180px',
+                      height: '180px',
+                      background: '#0f172a',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <svg width="150" height="150" viewBox="0 0 100 100" fill="none">
+                      <rect x="5" y="5" width="26" height="26" rx="4" fill="#0284c7" />
+                      <rect x="9" y="9" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="13" y="13" width="10" height="10" rx="1" fill="#38bdf8" />
+                      <rect x="69" y="5" width="26" height="26" rx="4" fill="#0284c7" />
+                      <rect x="73" y="9" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="77" y="13" width="10" height="10" rx="1" fill="#38bdf8" />
+                      <rect x="5" y="69" width="26" height="26" rx="4" fill="#0284c7" />
+                      <rect x="9" y="73" width="18" height="18" rx="2" fill="#0f172a" />
+                      <rect x="13" y="77" width="10" height="10" rx="1" fill="#38bdf8" />
+                      <rect x="42" y="42" width="16" height="16" rx="2" fill="#38bdf8" />
+                      <rect x="37" y="10" width="6" height="6" fill="#93c5fd" />
+                      <rect x="57" y="10" width="6" height="6" fill="#93c5fd" />
+                      <rect x="10" y="37" width="6" height="6" fill="#93c5fd" />
+                      <rect x="10" y="57" width="6" height="6" fill="#93c5fd" />
+                      <rect x="84" y="37" width="6" height="6" fill="#93c5fd" />
+                      <rect x="84" y="57" width="6" height="6" fill="#93c5fd" />
+                      <rect x="37" y="84" width="6" height="6" fill="#93c5fd" />
+                      <rect x="57" y="84" width="6" height="6" fill="#93c5fd" />
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 600 }}>
+                    Badge Token: <code style={{ color: '#0284c7' }}>qr_badge_{badgeEmployee.code.toLowerCase()}_092f</code>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
+                    Permanent static identifier for physical PVC badges & lanyards.
+                  </div>
+                </>
+              )}
+
+              {badgeMode === 'BARCODE' && (
+                <>
+                  <div
+                    style={{
+                      width: '260px',
+                      padding: '16px 12px',
+                      background: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', height: '60px', alignItems: 'stretch', width: '100%', gap: '2px' }}>
+                      {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 4, 2, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2].map((w, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            flex: w,
+                            background: idx % 2 === 0 ? '#000000' : 'transparent',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', letterSpacing: '0.3em', fontWeight: 700, color: '#000' }}>
+                      *{badgeEmployee.code}*
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
+                    Code 128 standard. Scannable with standard 1D laser & CCD handheld wedges.
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setSimEmployeeId(badgeEmployee.id);
+                  setScanType(badgeMode === 'ROTATING' ? 'ROTATING_QR' : badgeMode === 'PERMANENT' ? 'PERM_QR' : 'BARCODE');
+                  setActiveTab('devices');
+                  setBadgeEmployee(null);
+                }}
+                style={{
+                  flex: 1,
+                  background: 'var(--accent-gradient)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <ScanLine className="w-4 h-4" />
+                <span>Test in Terminal Simulator</span>
+              </button>
+              <button
+                onClick={() => setBadgeEmployee(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  padding: '12px 18px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

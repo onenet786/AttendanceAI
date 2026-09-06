@@ -86,3 +86,36 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 ### Real-Time Live Attendance (`/api/v1/attendance/live` & WebSockets)
 * `GET /api/v1/attendance/live/summary` - Current count of Present, Absent, Late, On Leave for today
 * `WebSocket /socket.io` - Real-time stream: `attendance:event`, `dashboard:stats_update`
+
+---
+
+## 5. Phase 2 Attendance Engine & Reporting Endpoints
+
+### Attendance Calculations & Events (`/api/v1/attendance`)
+* `POST /api/v1/attendance/punch` - Multi-interval punch ingress (`CHECK_IN`, `CHECK_OUT`, `BREAK_IN`, `BREAK_OUT`)
+* `POST /api/v1/attendance/correct` - Supervisor manual override with mandatory audit reason and automated timesheet recalculation
+* `GET /api/v1/attendance/timesheets` - Query daily multi-interval worked hours, breaks, late arrivals, and overtime
+* `GET /api/v1/attendance/daily` - Daily attendance ledger by branch, department, shift
+
+### Enterprise Reports (`/api/v1/reports`)
+* `GET /api/v1/reports/daily` - Daily status breakdowns
+* `GET /api/v1/reports/monthly` - Full monthly 31-day attendance matrix with attendance percentages
+* `GET /api/v1/reports/exceptions` - Lateness, early departure, and absenteeism exception audit
+* `GET /api/v1/reports/export-csv` - Compliant RFC 4180 CSV export
+
+---
+
+## 6. Phase 3 Device Management, QR & Barcodes (`/api/v1/devices`)
+
+### Hardware Devices & Terminals
+* `GET /api/v1/devices` - List registered turnstiles, biometric terminals, and barcode scanners
+* `POST /api/v1/devices/register` - Provision new hardware terminal and generate scoped `dtk_...` API token
+* `POST /api/v1/devices/heartbeat` - Hardware liveness check, status synchronization, and offline buffer queue reporting
+* `POST /api/v1/devices/terminal-punch` - Hardware terminal scanner ingress with header token authentication (`X-Device-Token`)
+
+### QR Badges & Barcode Credentials
+* `GET /api/v1/devices/qr/permanent/:employeeId` - Retrieve cryptographic permanent badge token
+* `GET /api/v1/devices/qr/dynamic/:employeeId` - Generate HMAC-SHA256 signed rotating token with 30–60s countdown and anti-replay nonce
+* `POST /api/v1/devices/qr/verify` - Validate static or dynamic rotating QR payload with nonce cache check
+* `GET /api/v1/devices/barcode/:employeeId` - Generate standard Code128 payload for 1D laser & CCD scanners
+

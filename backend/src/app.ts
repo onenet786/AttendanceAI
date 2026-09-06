@@ -15,6 +15,7 @@ import tenantRoutes from './modules/tenants/tenants.routes.js';
 import employeeRoutes from './modules/employees/employees.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
+import devicesRoutes from './modules/devices/devices.routes.js';
 
 const app = express();
 
@@ -155,6 +156,7 @@ app.use('/api/v1/organization', tenantRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
+app.use('/api/v1/devices', devicesRoutes);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {
