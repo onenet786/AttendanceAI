@@ -866,7 +866,7 @@ export default function App() {
             }}
           >
             <Clock style={{ width: '18px', height: '18px' }} />
-            <span>Attendance Hub (Phase 2)</span>
+            <span>Attendance & Timesheets</span>
           </button>
 
           <button

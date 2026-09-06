@@ -11,11 +11,16 @@ cd "$APP_DIR"
 
 # Allow Git operations inside aaPanel directory without dubious ownership warning
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+git config --global --add safe.directory /www/wwwroot/attendance-ai 2>/dev/null || true
 
 echo "=========================================================="
-echo "  AttendanceAI: Initializing for aaPanel..."
+echo "  AttendanceAI: Initializing & Updating for aaPanel..."
 echo "  Directory: $APP_DIR"
 echo "=========================================================="
+
+echo "-> [0/3] Syncing latest code from GitHub main..."
+git stash 2>/dev/null || true
+git pull origin main || echo "Git pull notice: Proceeding with existing code files..."
 
 # Create directories
 mkdir -p logs
