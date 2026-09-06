@@ -1,0 +1,16 @@
+{
+  "name": "attendance-ai-root",
+  "version": "1.0.0",
+  "description": "Enterprise AI-Powered Multi-Tenant HR, Attendance, Task & Payroll Platform",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd backend && npm install --legacy-peer-deps && npx prisma generate && cd ../frontend && npm install --legacy-peer-deps",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "node backend/dist/server.js",
+    "seed": "cd backend && npm run seed",
+    "db:push": "cd backend && npx prisma db push",
+    "db:migrate": "cd backend && npx prisma migrate deploy"
+  }
+}
