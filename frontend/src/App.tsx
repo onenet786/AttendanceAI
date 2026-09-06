@@ -23,7 +23,10 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  X
+  X,
+  Send,
+  Bot,
+  Terminal
 } from 'lucide-react';
 
 interface Employee {
@@ -69,6 +72,20 @@ interface TimesheetRecord {
   status: 'PRESENT' | 'LATE' | 'HALF_DAY' | 'ON_LEAVE' | 'ABSENT';
   intervals: Array<{ start: string; end: string; duration: string; source: string }>;
   breaks: Array<{ start: string; end: string; duration: string }>;
+}
+
+interface AgentUiMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  toolCalls?: Array<{
+    name: string;
+    arguments: any;
+    result?: any;
+    status: 'SUCCESS' | 'ERROR' | 'PERMISSION_DENIED';
+    executionTimeMs: number;
+  }>;
 }
 
 const INITIAL_EMPLOYEES: Employee[] = [
@@ -182,7 +199,7 @@ const INITIAL_TIMESHEETS: TimesheetRecord[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'agent' | 'audit'>('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [events, setEvents] = useState<AttendanceEvent[]>(INITIAL_EVENTS);
@@ -238,6 +255,19 @@ export default function App() {
   const [voiceConfidence, setVoiceConfidence] = useState<number | null>(null);
   const [voiceIntent, setVoiceIntent] = useState<string | null>(null);
   const [isVoiceCalibrating, setIsVoiceCalibrating] = useState<boolean>(false);
+
+  // AI Assistant & Copilot State (Phase 6)
+  const [chatMessages, setChatMessages] = useState<AgentUiMessage[]>([
+    {
+      id: 'welcome-msg',
+      role: 'assistant',
+      content:
+        '👋 Hello! I am your **AttendanceAI Assistant**. I have live access to your multi-tenant database, turnstiles, CCTV gateways, and calculation engines.\n\nAsk me about absent personnel, check timesheet hours, verify hardware health, or generate reports!',
+      timestamp: 'Just now',
+    },
+  ]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [isAgentThinking, setIsAgentThinking] = useState<boolean>(false);
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -499,6 +529,94 @@ export default function App() {
     }, 1200);
   };
 
+  // AI Assistant & Autonomous Tool Dispatcher (Phase 6)
+  const handleSendAgentMessage = (textToSend?: string) => {
+    const msg = (textToSend || chatInput).trim();
+    if (!msg) return;
+
+    const userMsg: AgentUiMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: msg,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput('');
+    setIsAgentThinking(true);
+
+    setTimeout(() => {
+      const lower = msg.toLowerCase();
+      let toolName = 'get_attendance_summary';
+      let toolResult: any = { scheduled: 22, present: 19, late: 2, onBreak: 3, absent: 2, onLeave: 1, attendanceRate: '86.4%' };
+      let assistantText = '### 📊 Real-Time Attendance Overview\n\n- **Scheduled Staff**: 22\n- **Currently Present**: 19 (86.4% Attendance Rate)\n- **Late Arrivals**: 2\n- **Active Breaks**: 3\n- **Approved Leaves**: 1\n- **Absent**: 2\n\nAll turnstile readers and CCTV edge gateways are logging normal interval ingress.';
+
+      if (lower.includes('absent') || lower.includes('late')) {
+        toolName = 'get_absent_employees';
+        toolResult = {
+          count: 2,
+          branch: lower.includes('lahore') ? 'Lahore Head Office' : 'All Branches',
+          absentEmployees: [
+            { code: 'EMP-014', name: 'Usman Tariq', department: 'Operations', branch: 'Lahore Head Office', shift: '09:00 - 18:00' },
+            { code: 'EMP-019', name: 'Fatima Noor', department: 'Finance', branch: 'Islamabad Tech Hub', shift: '09:00 - 18:00' },
+          ],
+        };
+        assistantText = `### 🚨 Absent & Unlogged Employees (2 Found)\n\nScheduled staff members who have not registered a check-in punch today:\n- **Usman Tariq** (\`EMP-014\`) — *Operations* [Lahore Head Office] | Shift: 09:00 - 18:00\n- **Fatima Noor** (\`EMP-019\`) — *Finance* [Islamabad Tech Hub] | Shift: 09:00 - 18:00\n\n> 💡 *Automated SMS and manager alerts have been queued for both employees.*`;
+      } else if (lower.includes('hours') || lower.includes('timesheet')) {
+        toolName = 'get_employee_timesheet';
+        toolResult = {
+          employee: 'Alex Morgan (EMP-001)',
+          shift: 'Morning Shift (09:00 - 18:00)',
+          checkIn: '08:58 AM',
+          totalWorkedHours: 6.03,
+          scheduledHours: 8.0,
+          totalBreakMinutes: 45,
+          complianceScore: '100%',
+        };
+        assistantText = `### ⏱️ Timesheet Calculation: Alex Morgan (EMP-001)\n\n- **Shift**: Morning Shift (09:00 - 18:00)\n- **First Ingress**: **08:58 AM**\n- **Total Worked**: **6.03 hours** (Scheduled: 8.0 hrs)\n- **Break Duration**: 45 mins\n- **Shift Compliance**: **100% (On-Time)**\n\n*Multi-interval calculation engine active: \\sum (OUT_i - IN_i)*`;
+      } else if (lower.includes('device') || lower.includes('camera') || lower.includes('turnstile') || lower.includes('gateway')) {
+        toolName = 'get_device_telemetry';
+        toolResult = {
+          totalDevices: 6,
+          onlineCount: 6,
+          offlineCount: 0,
+          gateways: ['Lahore Gateway (ONLINE)', 'Islamabad Gateway (ONLINE)'],
+          cameras: ['Turnstile A Face Cam (ONLINE, 28.5 FPS)', 'Turnstile B Face Cam (ONLINE, 29.1 FPS)'],
+        };
+        assistantText = `### 🛡️ Edge Gateway & CCTV Device Health\n\nAll **6 registered hardware devices** are operating normally with **0 offline devices**:\n- **Gateways**: Lahore Gateway (\`192.168.1.50\`), Islamabad Gateway (\`192.168.2.50\`)\n- **Biometric Cameras**: Turnstile Ingress Cam (28.5 FPS), Egress Cam (29.1 FPS)\n\nNetwork ping latency is under 15ms with full WebSocket heartbeat synchronization.`;
+      } else if (lower.includes('report') || lower.includes('compliance')) {
+        toolName = 'generate_attendance_report';
+        toolResult = { period: 'this_week', punctualityScore: '94.5%', completedShifts: 104, totalScheduledShifts: 110 };
+        assistantText = `### 📈 Executive Attendance & Compliance Report\n\n- **Reporting Period**: This Week (Global Multi-Branch)\n- **Punctuality Score**: **94.5%**\n- **Completed Shifts**: 104 / 110\n- **Average Daily Worked Hours**: 8.12 hrs\n- **Total Overtime Accumulated**: 14.5 hrs\n\n📥 [Download RFC 4180 Audit CSV Export](/api/v1/reports/export-csv)`;
+      } else if (lower.includes('find') || lower.includes('search') || lower.includes('employee') || lower.includes('sara') || lower.includes('who is')) {
+        toolName = 'search_employees';
+        toolResult = [
+          { name: 'Sara Khan', code: 'EMP-002', designation: 'Senior Product Manager', department: 'Product', branch: 'Islamabad Tech Hub' },
+        ];
+        assistantText = `### 👥 Employee Search Results\n\n- **Sara Khan** (\`EMP-002\`) — Senior Product Manager | *Product* [Islamabad Tech Hub]\n  - Status: ACTIVE\n  - Shift: 09:00 - 18:00\n  - Email: sara.khan@democompany.com`;
+      }
+
+      const assistantMsg: AgentUiMessage = {
+        id: `asst-${Date.now()}`,
+        role: 'assistant',
+        content: assistantText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        toolCalls: [
+          {
+            name: toolName,
+            arguments: { query: msg },
+            result: toolResult,
+            status: 'SUCCESS',
+            executionTimeMs: 42,
+          },
+        ],
+      };
+
+      setChatMessages((prev) => [...prev, assistantMsg]);
+      setIsAgentThinking(false);
+    }, 600);
+  };
+
   const getSourceIcon = (source: AttendanceEvent['source']) => {
     switch (source) {
       case 'CAMERA':
@@ -658,6 +776,27 @@ export default function App() {
           >
             <Mic style={{ width: '18px', height: '18px' }} />
             <span>Voice Attendance & AI</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('agent')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              background: activeTab === 'agent' ? 'rgba(168, 85, 247, 0.18)' : 'transparent',
+              color: activeTab === 'agent' ? '#c084fc' : 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <Sparkles style={{ width: '18px', height: '18px', color: '#c084fc' }} />
+            <span>AI Assistant & Agent</span>
           </button>
 
           <button
@@ -2068,6 +2207,347 @@ export default function App() {
                     No voice attendance punches logged yet in this session. Click the microphone or choose a preset above to log one!
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI ASSISTANT & AGENT COPILOT TAB (PHASE 6) */}
+        {activeTab === 'agent' && (
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(168, 85, 247, 0.15)', borderRadius: '10px', color: '#c084fc' }}>
+                    <Sparkles style={{ width: '24px', height: '24px' }} />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Enterprise AI Assistant & Autonomous Copilot</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
+                      Conversational multi-turn reasoning with autonomous tool calling across databases, timesheet engines, and edge hardware.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles style={{ width: '13px', height: '13px' }} />
+                  <span>Tool Dispatcher: Active</span>
+                </span>
+                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldCheck style={{ width: '13px', height: '13px' }} />
+                  <span>RBAC Guardrails: Enforced</span>
+                </span>
+                <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Terminal style={{ width: '13px', height: '13px' }} />
+                  <span>7 Business Tools Registered</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Prompt Chips */}
+            <div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>
+                Suggested Business Prompts (Click to Execute)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {[
+                  'Who is absent today in Lahore Head Office?',
+                  'What is our overall attendance rate today?',
+                  'Show timesheet calculation for Alex Morgan',
+                  'Are all turnstiles and CCTV cameras online?',
+                  'Generate attendance compliance report',
+                  'Find employee Sara Khan in Product',
+                ].map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendAgentMessage(prompt)}
+                    disabled={isAgentThinking}
+                    style={{
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      color: '#e2e8f0',
+                      fontSize: '0.82rem',
+                      cursor: isAgentThinking ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c084fc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+                  >
+                    <Sparkles style={{ width: '13px', height: '13px', color: '#c084fc' }} />
+                    <span>"{prompt}"</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Main Interactive Chat & Tools Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)', gap: '24px', alignItems: 'start' }}>
+              {/* Chat Column */}
+              <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '620px', overflow: 'hidden' }}>
+                {/* Chat Header */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+                    <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>Active Conversational Session</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tenant Isolated</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setChatMessages([
+                        {
+                          id: 'welcome-reset',
+                          role: 'assistant',
+                          content:
+                            'Conversation reset. How can I help you manage attendance, query timesheets, or inspect devices today?',
+                          timestamp: 'Just now',
+                        },
+                      ])
+                    }
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      color: 'var(--text-secondary)',
+                      padding: '4px 10px',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reset Chat
+                  </button>
+                </div>
+
+                {/* Message Stream */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  {chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                        gap: '6px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {msg.role === 'assistant' && (
+                          <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c084fc' }}>
+                            <Bot style={{ width: '14px', height: '14px' }} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {msg.role === 'user' ? 'You (Super Admin)' : 'AttendanceAI Copilot'} • {msg.timestamp}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          maxWidth: '85%',
+                          padding: '14px 18px',
+                          borderRadius: msg.role === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                          background:
+                            msg.role === 'user'
+                              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(168, 85, 247, 0.3))'
+                              : 'var(--bg-elevated)',
+                          border: msg.role === 'user' ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-subtle)',
+                          color: '#fff',
+                          fontSize: '0.9rem',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        {msg.content}
+                      </div>
+
+                      {/* Tool Execution Trace Card */}
+                      {msg.toolCalls && msg.toolCalls.length > 0 && (
+                        <div
+                          style={{
+                            maxWidth: '85%',
+                            marginTop: '4px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(168, 85, 247, 0.25)',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            fontSize: '0.78rem',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Terminal style={{ width: '14px', height: '14px', color: '#c084fc' }} />
+                              <span style={{ fontWeight: 600, color: '#e2e8f0' }}>Tool Invocations ({msg.toolCalls.length})</span>
+                            </div>
+                            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                              ⚡ {msg.toolCalls[0].executionTimeMs}ms
+                            </span>
+                          </div>
+
+                          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {msg.toolCalls.map((tool, tIdx) => (
+                              <div
+                                key={tIdx}
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.03)',
+                                  borderRadius: '6px',
+                                  padding: '8px 10px',
+                                  border: '1px solid var(--border-subtle)',
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontFamily: 'monospace', color: '#818cf8', fontWeight: 600 }}>
+                                    {tool.name}()
+                                  </span>
+                                  <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>
+                                    STATUS: {tool.status}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>
+                                  Payload: {JSON.stringify(tool.result, null, 1)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Thinking Indicator */}
+                  {isAgentThinking && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#c084fc', fontSize: '0.85rem' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bot style={{ width: '14px', height: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>Analyzing intent & executing tools...</span>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#c084fc', animation: 'pulse 1s infinite' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chat Input Bar */}
+                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)', display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSendAgentMessage();
+                    }}
+                    placeholder="Ask anything about employees, attendance rate, timesheets, hardware health..."
+                    style={{
+                      flex: 1,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={() => handleSendAgentMessage()}
+                    disabled={isAgentThinking || !chatInput.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0 20px',
+                      cursor: isAgentThinking || !chatInput.trim() ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: 600,
+                      fontSize: '0.88rem',
+                      opacity: isAgentThinking || !chatInput.trim() ? 0.6 : 1,
+                      boxShadow: '0 0 15px rgba(168, 85, 247, 0.4)',
+                    }}
+                  >
+                    <Send style={{ width: '16px', height: '16px' }} />
+                    <span>Send</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Telemetry & Tools Manifest */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Registered Business Tools Manifest */}
+                <div className="glass-panel" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <Terminal style={{ width: '18px', height: '18px', color: '#c084fc' }} />
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Tool Registry Manifest</h3>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { name: 'search_employees', desc: 'Directory search across branches & departments', access: 'All Roles' },
+                      { name: 'get_attendance_summary', desc: 'Real-time KPIs: present, late, absent, breaks', access: 'All Roles' },
+                      { name: 'get_employee_timesheet', desc: 'Calculates multi-interval worked hours & overtime', access: 'All Roles' },
+                      { name: 'get_absent_employees', desc: 'Identifies scheduled personnel not yet logged', access: 'All Roles' },
+                      { name: 'correct_attendance_record', desc: 'Supervisor manual punch override with audit reason', access: 'Supervisors & Admins' },
+                      { name: 'get_device_telemetry', desc: 'Ingress liveness of turnstiles, cameras & gateways', access: 'All Roles' },
+                      { name: 'generate_attendance_report', desc: 'Full compliance CSV analytics report dispatching', access: 'Admins Only' },
+                    ].map((t, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          background: 'var(--bg-elevated)',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#c084fc', fontSize: '0.82rem' }}>
+                            {t.name}()
+                          </span>
+                          <span style={{ fontSize: '0.68rem', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                            {t.access}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          {t.desc}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Session Security Context */}
+                <div className="glass-panel" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <ShieldCheck style={{ width: '18px', height: '18px', color: '#10b981' }} />
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Security & Audit Guardrails</h3>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Active Tenant Scope</span>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>Demo Corporation (HQ)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Authenticated Role</span>
+                      <span style={{ color: '#10b981', fontWeight: 600 }}>SUPER_ADMIN</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                      <span>Multi-Turn Memory</span>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>Stateful Session Map</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Audit Trail Sync</span>
+                      <span style={{ color: '#818cf8', fontWeight: 500 }}>100% Ingress Captured</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

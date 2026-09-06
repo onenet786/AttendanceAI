@@ -146,5 +146,15 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 * `POST /api/v1/voice/command` - Primary multimodal endpoint accepting raw audio/speech transcript + optional acoustic vector. Parses natural language intent (`CHECK_IN`, `CHECK_OUT`, `BREAK_START`, `BREAK_END`, `HOURS_QUERY`, `STATUS_QUERY`, `TEAM_QUERY`), executes biometric validation, dispatches into Central Attendance Engine (`source: 'VOICE'`), and returns natural spoken audio response text.
 * `POST /api/v1/voice/parse-intent` - Lightweight testing endpoint to classify natural language intent and slots without triggering attendance mutations.
 
+---
+
+## 9. Phase 6 AI Assistant / Agent Subsystem (`/api/v1/agent`)
+
+### Multi-Turn Conversational Reasoning & Tool Dispatching
+* `POST /api/v1/agent/chat` - Send natural language prompt with optional `conversationId`. Dispatches registered business tools (`search_employees`, `get_attendance_summary`, `get_employee_timesheet`, `get_absent_employees`, `correct_attendance_record`, `get_device_telemetry`, `generate_attendance_report`), applies strict RBAC validation, and returns synthesized markdown answer with structured tool execution cards.
+* `GET /api/v1/agent/tools` - Introspect list of available tools, descriptions, parameter schemas, and permissions for authenticated user role.
+* `GET /api/v1/agent/conversations/:id` - Retrieve full chronological message and tool execution trace history for an active session.
+
+
 
 
