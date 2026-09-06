@@ -16,6 +16,8 @@ import employeeRoutes from './modules/employees/employees.routes.js';
 import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import devicesRoutes from './modules/devices/devices.routes.js';
+import biometricsRoutes from './modules/biometrics/face.routes.js';
+import camerasRoutes from './modules/cameras/cameras.routes.js';
 
 const app = express();
 
@@ -157,6 +159,8 @@ app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/devices', devicesRoutes);
+app.use('/api/v1/biometrics', biometricsRoutes);
+app.use('/api/v1/cameras', camerasRoutes);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {

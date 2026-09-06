@@ -220,6 +220,16 @@ export default function App() {
   const [scanType, setScanType] = useState<'ROTATING_QR' | 'PERM_QR' | 'BARCODE'>('ROTATING_QR');
   const [terminalScanFeedback, setTerminalScanFeedback] = useState<string | null>(null);
 
+  // Biometrics & Face Recognition State (Phase 4)
+  const [faceEmployeeId, setFaceEmployeeId] = useState<string>('1');
+  const [isSpoofSimulated, setIsSpoofSimulated] = useState<boolean>(false);
+  const [faceScanStatus, setFaceScanStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [faceFeedback, setFaceFeedback] = useState<string | null>(null);
+  const [enrollingEmployee, setEnrollingEmployee] = useState<Employee | null>(null);
+  const [enrollmentAngle, setEnrollmentAngle] = useState<'FRONT' | 'LEFT' | 'RIGHT'>('FRONT');
+  const [enrollmentProgress, setEnrollmentProgress] = useState<number>(0);
+  const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
+
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
     const matchesBranch = selectedBranch === 'ALL' || emp.branch.toLowerCase().includes(selectedBranch.toLowerCase());
@@ -354,6 +364,68 @@ export default function App() {
     setEvents([newEvent, ...events]);
     setTerminalScanFeedback(`Hardware Scan Success: ${emp.name} punched IN via ${scanLabel} on terminal ${selectedTerminal}.`);
     setTimeout(() => setTerminalScanFeedback(null), 5000);
+  };
+
+  // Live Biometric Face Punch (Phase 4)
+  const handleFaceScanPunch = () => {
+    setFaceScanStatus('SCANNING');
+    setFaceFeedback('Analyzing facial landmarks, calculating 512-dim embedding & verifying liveness...');
+
+    setTimeout(() => {
+      if (isSpoofSimulated) {
+        setFaceScanStatus('ERROR');
+        setFaceFeedback('SPOOF DETECTED: Presentation attack rejected (Liveness 42.1% < 85.0%). Screen replay or 2D photo intercepted.');
+        setTimeout(() => setFaceScanStatus('IDLE'), 4500);
+        return;
+      }
+
+      const emp = employees.find((e) => e.id === faceEmployeeId) || employees[0];
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      const newEvent: AttendanceEvent = {
+        id: `face-${Date.now()}`,
+        employeeName: emp.name,
+        employeeCode: emp.code,
+        eventType: 'CHECK_IN',
+        source: 'FACE',
+        time: `${timeStr} [Webcam Kiosk]`,
+        branch: emp.branch,
+        photo: emp.photo,
+        confidence: 0.984,
+      };
+
+      setEvents([newEvent, ...events]);
+      setFaceScanStatus('SUCCESS');
+      setFaceFeedback(`VERIFIED: ${emp.name} (${emp.code}) identified with 98.4% confidence (Liveness 97.8% Live Human). CHECK_IN recorded.`);
+      setTimeout(() => setFaceScanStatus('IDLE'), 4500);
+    }, 1200);
+  };
+
+  const handleStartEnrollment = (emp: Employee) => {
+    setEnrollingEmployee(emp);
+    setEnrollmentProgress(25);
+    setEnrollmentAngle('FRONT');
+  };
+
+  const handleCaptureAngle = () => {
+    if (enrollmentAngle === 'FRONT') {
+      setEnrollmentProgress(60);
+      setEnrollmentAngle('LEFT');
+    } else if (enrollmentAngle === 'LEFT') {
+      setEnrollmentProgress(90);
+      setEnrollmentAngle('RIGHT');
+    } else {
+      setEnrollmentProgress(100);
+      setIsEnrolling(true);
+      setTimeout(() => {
+        setIsEnrolling(false);
+        const name = enrollingEmployee?.name;
+        setEnrollingEmployee(null);
+        setFaceFeedback(`Enrollment Complete: 512-dim normalized vector saved for ${name} (96.8% quality score). Synced to local edge gateways.`);
+        setTimeout(() => setFaceFeedback(null), 5000);
+      }, 900);
+    }
   };
 
   const getSourceIcon = (source: AttendanceEvent['source']) => {
@@ -1157,6 +1229,16 @@ export default function App() {
                           <span style={{ padding: '4px 8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '4px', color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600 }}>
                             Barcode
                           </span>
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartEnrollment(emp);
+                            }}
+                            style={{ padding: '4px 8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '4px', color: '#34d399', fontSize: '0.75rem', fontWeight: 600 }}
+                            title="Enroll or Update 512-dim Biometric Face Vector"
+                          >
+                            Face Enroll
+                          </span>
                         </div>
                       </td>
                     </tr>
@@ -1171,10 +1253,189 @@ export default function App() {
         {activeTab === 'devices' && (
           <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>CCTV IP Cameras & Attendance Edge Gateways</h1>
+              <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Biometrics, IP Cameras & Edge Surveillance Hub</h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                Secure on-premise gateways connect to RTSP streams over LAN and stream verified attendance punches without raw video cloud streaming.
+                Secure on-premise edge gateways ingest RTSP video on local LAN, extracting 512-dimensional face vectors and streaming verified punches without cloud video upload.
               </p>
+            </div>
+
+            {/* Live Biometric Webcam Kiosk (Phase 4) */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <ScanLine style={{ width: '24px', height: '24px', color: '#10b981' }} />
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>
+                      Live Biometric Facial Recognition Terminal
+                    </h3>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      Simulates front-desk biometric kiosk or LAN camera stream with 512-dim cosine similarity vector matching and active anti-spoofing liveness guard.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="badge badge-present" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+                    LIVENESS ENGINE ACTIVE
+                  </span>
+                </div>
+              </div>
+
+              {faceFeedback && (
+                <div
+                  style={{
+                    background: faceScanStatus === 'ERROR' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    border: `1px solid ${faceScanStatus === 'ERROR' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
+                    color: faceScanStatus === 'ERROR' ? '#fca5a5' : '#6ee7b7',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    fontSize: '0.88rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {faceFeedback}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'center' }}>
+                {/* Simulated Camera Viewport with HUD Overlay */}
+                <div
+                  style={{
+                    position: 'relative',
+                    background: 'radial-gradient(circle at center, #111827 0%, #030712 100%)',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    height: '240px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    boxShadow: 'inset 0 0 30px rgba(0, 0, 0, 0.8)',
+                  }}
+                >
+                  {/* Target Brackets */}
+                  <div style={{ position: 'absolute', inset: '24px', border: '1px dashed rgba(52, 211, 153, 0.25)', borderRadius: '10px', pointerEvents: 'none' }} />
+
+                  {/* Corner Reticles */}
+                  <div style={{ position: 'absolute', top: '20px', left: '20px', width: '16px', height: '16px', borderTop: '3px solid #34d399', borderLeft: '3px solid #34d399' }} />
+                  <div style={{ position: 'absolute', top: '20px', right: '20px', width: '16px', height: '16px', borderTop: '3px solid #34d399', borderRight: '3px solid #34d399' }} />
+                  <div style={{ position: 'absolute', bottom: '20px', left: '20px', width: '16px', height: '16px', borderBottom: '3px solid #34d399', borderLeft: '3px solid #34d399' }} />
+                  <div style={{ position: 'absolute', bottom: '20px', right: '20px', width: '16px', height: '16px', borderBottom: '3px solid #34d399', borderRight: '3px solid #34d399' }} />
+
+                  {/* Simulated Face In Center */}
+                  {(() => {
+                    const activeEmp = employees.find((e) => e.id === faceEmployeeId) || employees[0];
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', zIndex: 1 }}>
+                        <div style={{ position: 'relative' }}>
+                          <img
+                            src={activeEmp.photo}
+                            alt={activeEmp.name}
+                            style={{
+                              width: '90px',
+                              height: '90px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: faceScanStatus === 'ERROR' ? '3px solid #ef4444' : '3px solid #10b981',
+                              boxShadow: faceScanStatus === 'ERROR' ? '0 0 20px rgba(239, 68, 68, 0.6)' : '0 0 20px rgba(16, 185, 129, 0.5)',
+                            }}
+                          />
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{activeEmp.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#34d399' }}>512-dim Normalized Vector Ready</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Telemetry Badges */}
+                  <div style={{ position: 'absolute', top: '10px', left: '12px', fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', gap: '10px' }}>
+                    <span>FPS: 30</span>
+                    <span>RES: 1080p</span>
+                    <span>LATENCY: 14ms</span>
+                  </div>
+
+                  <div style={{ position: 'absolute', bottom: '10px', right: '12px', fontSize: '0.68rem', color: isSpoofSimulated ? '#ef4444' : '#34d399', fontWeight: 600 }}>
+                    {isSpoofSimulated ? '⚠️ REPLAY ATTACK SIMULATED' : '✓ LIVE HUMAN (98.2%)'}
+                  </div>
+                </div>
+
+                {/* Biometric Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                      Presented Employee Candidate
+                    </label>
+                    <select
+                      value={faceEmployeeId}
+                      onChange={(e) => setFaceEmployeeId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-elevated)',
+                        color: '#fff',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {employees.map((e) => (
+                        <option key={e.id} value={e.id}>{e.name} ({e.code}) — {e.department}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--border-subtle)',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id="spoofCheckbox"
+                      checked={isSpoofSimulated}
+                      onChange={(e) => setIsSpoofSimulated(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#ef4444', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="spoofCheckbox" style={{ fontSize: '0.8rem', color: '#f87171', cursor: 'pointer' }}>
+                      Simulate 2D Screen Replay Attack (Test Anti-Spoofing Rejection)
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <button
+                      onClick={handleFaceScanPunch}
+                      disabled={faceScanStatus === 'SCANNING'}
+                      style={{
+                        flex: 1,
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '11px 20px',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        cursor: faceScanStatus === 'SCANNING' ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                      }}
+                    >
+                      <ScanLine className="w-4 h-4" />
+                      <span>{faceScanStatus === 'SCANNING' ? 'Analyzing Face...' : 'Trigger Live Biometric Punch'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
@@ -1899,6 +2160,236 @@ export default function App() {
                 }}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FACE BIOMETRIC ENROLLMENT MODAL (Phase 4) */}
+      {enrollingEmployee && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 7, 15, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setEnrollingEmployee(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(145deg, #131d27 0%, #0a0f18 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '480px',
+              padding: '28px',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ScanLine style={{ width: '22px', height: '22px', color: '#10b981' }} />
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+                    Biometric Face Enrollment
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Captures multi-angle facial landmarks and compiles normalized 512-dim mathematical template.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEnrollingEmployee(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                <X style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
+
+            {/* Employee Preview */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+              }}
+            >
+              <img
+                src={enrollingEmployee.photo}
+                alt={enrollingEmployee.name}
+                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }}
+              />
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>{enrollingEmployee.name}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  {enrollingEmployee.code} • {enrollingEmployee.department} ({enrollingEmployee.branch})
+                </div>
+              </div>
+            </div>
+
+            {/* Multi-Angle Enrollment Stage */}
+            <div
+              style={{
+                background: '#040711',
+                borderRadius: '14px',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <img
+                  src={enrollingEmployee.photo}
+                  alt="Capture Target"
+                  style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    filter: enrollmentAngle === 'LEFT' ? 'brightness(0.9) contrast(1.1)' : enrollmentAngle === 'RIGHT' ? 'brightness(1.1)' : 'none',
+                    transform: enrollmentAngle === 'LEFT' ? 'rotate(-6deg)' : enrollmentAngle === 'RIGHT' ? 'rotate(6deg)' : 'none',
+                    transition: 'all 0.3s ease',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '50%',
+                    border: '3px dashed #10b981',
+                    animation: isEnrolling ? 'spin 1s linear infinite' : 'none',
+                  }}
+                />
+              </div>
+
+              {/* Progress & Quality */}
+              <div style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    Current Stage: <strong style={{ color: '#fff' }}>{enrollmentAngle === 'FRONT' ? '1/3 Frontal Face' : enrollmentAngle === 'LEFT' ? '2/3 Left 15° Angle' : '3/3 Right 15° Angle'}</strong>
+                  </span>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>{enrollmentProgress}%</span>
+                </div>
+                <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${enrollmentProgress}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #10b981, #34d399)',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center' }}>
+                {enrollmentAngle === 'FRONT' && 'Look straight into the lens. Ensure even lighting.'}
+                {enrollmentAngle === 'LEFT' && 'Turn your head slightly to the left (15 degrees).'}
+                {enrollmentAngle === 'RIGHT' && 'Turn your head slightly to the right (15 degrees).'}
+              </div>
+            </div>
+
+            {/* Quality Metrics */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Dimensions</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>512 Floats</div>
+              </div>
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>L2 Norm</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>1.0000 Unit</div>
+              </div>
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Template Quality</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>96.8% (High)</div>
+              </div>
+            </div>
+
+            {/* Capture Button */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleCaptureAngle}
+                disabled={isEnrolling}
+                style={{
+                  flex: 1,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isEnrolling ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                }}
+              >
+                <ScanLine className="w-4 h-4" />
+                <span>
+                  {isEnrolling
+                    ? 'Saving & Syncing to Edge Gateways...'
+                    : enrollmentAngle === 'RIGHT'
+                    ? 'Finalize & Compile Face Vector'
+                    : `Capture ${enrollmentAngle === 'FRONT' ? 'Frontal Angle' : 'Left Angle'}`}
+                </span>
+              </button>
+              <button
+                onClick={() => setEnrollingEmployee(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  padding: '12px 18px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>

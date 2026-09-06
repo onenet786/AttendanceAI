@@ -119,3 +119,19 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 * `POST /api/v1/devices/qr/verify` - Validate static or dynamic rotating QR payload with nonce cache check
 * `GET /api/v1/devices/barcode/:employeeId` - Generate standard Code128 payload for 1D laser & CCD scanners
 
+---
+
+## 7. Phase 4 Face Biometrics & IP Camera Ingress
+
+### Biometrics (`/api/v1/biometrics/face`)
+* `POST /api/v1/biometrics/face/enroll` - Enroll normalized 512-dim facial vector embedding
+* `POST /api/v1/biometrics/face/identify` - Vector Cosine Similarity lookup against branch gallery
+* `POST /api/v1/biometrics/face/webcam-punch` - Single-step biometric check-in with liveness evaluation
+
+### IP Cameras & Edge Gateways (`/api/v1/cameras`)
+* `GET /api/v1/cameras` - List registered CCTV camera streams and Edge Gateway statuses
+* `POST /api/v1/cameras` - Register new IP camera RTSP stream configuration
+* `POST /api/v1/cameras/gateway/match-stream` - Real-time stream detection ingress from Edge Gateway (`X-Gateway-Token`)
+* `POST /api/v1/cameras/gateway/sync-batch` - Ingest offline buffered punches from Edge Gateway SQLite queue
+
+
