@@ -20,6 +20,7 @@ import biometricsRoutes from './modules/biometrics/face.routes.js';
 import camerasRoutes from './modules/cameras/cameras.routes.js';
 import voiceRoutes from './modules/voice/voice.routes.js';
 import agentRoutes from './modules/agent/agent.routes.js';
+import payrollRoutes from './modules/payroll/payroll.routes.js';
 
 const app = express();
 
@@ -165,6 +166,7 @@ app.use('/api/v1/biometrics', biometricsRoutes);
 app.use('/api/v1/cameras', camerasRoutes);
 app.use('/api/v1/voice', voiceRoutes);
 app.use('/api/v1/agent', agentRoutes);
+app.use('/api/v1/payroll', payrollRoutes);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {

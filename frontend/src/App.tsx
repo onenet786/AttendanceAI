@@ -26,7 +26,9 @@ import {
   X,
   Send,
   Bot,
-  Terminal
+  Terminal,
+  Printer,
+  Lock
 } from 'lucide-react';
 
 interface Employee {
@@ -87,6 +89,125 @@ interface AgentUiMessage {
     executionTimeMs: number;
   }>;
 }
+
+interface PayslipUiRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  department: string;
+  branch: string;
+  designation: string;
+  basicSalary: number;
+  houseAllowance: number;
+  transportAllowance: number;
+  medicalAllowance: number;
+  overtimeHours: number;
+  overtimePay: number;
+  grossSalary: number;
+  incomeTax: number;
+  providentFund: number;
+  attendancePenalty: number;
+  totalDeductions: number;
+  netSalary: number;
+  status: 'DRAFT' | 'APPROVED' | 'PAID';
+  bankAccount: string;
+}
+
+const INITIAL_PAYSLIPS: PayslipUiRecord[] = [
+  {
+    id: 'ps-001',
+    employeeId: '1',
+    employeeName: 'Muhammad Ahmed',
+    employeeCode: 'EMP-001',
+    department: 'Information Technology',
+    branch: 'Lahore Head Office',
+    designation: 'Senior Software Engineer',
+    basicSalary: 6500,
+    houseAllowance: 1300,
+    transportAllowance: 400,
+    medicalAllowance: 300,
+    overtimeHours: 4.5,
+    overtimePay: 182.81,
+    grossSalary: 8682.81,
+    incomeTax: 1216.13,
+    providentFund: 325.0,
+    attendancePenalty: 0,
+    totalDeductions: 1541.13,
+    netSalary: 7141.68,
+    status: 'APPROVED',
+    bankAccount: 'PK36SCBL0000001123456701',
+  },
+  {
+    id: 'ps-002',
+    employeeId: '2',
+    employeeName: 'Bilal Hassan',
+    employeeCode: 'EMP-002',
+    department: 'Information Technology',
+    branch: 'Lahore Head Office',
+    designation: 'Senior Software Engineer',
+    basicSalary: 6200,
+    houseAllowance: 1240,
+    transportAllowance: 400,
+    medicalAllowance: 300,
+    overtimeHours: 2.0,
+    overtimePay: 77.5,
+    grossSalary: 8217.5,
+    incomeTax: 1111.44,
+    providentFund: 310.0,
+    attendancePenalty: 103.33,
+    totalDeductions: 1524.77,
+    netSalary: 6692.73,
+    status: 'APPROVED',
+    bankAccount: 'PK36HABB0000009988776602',
+  },
+  {
+    id: 'ps-003',
+    employeeId: '3',
+    employeeName: 'Ayesha Khan',
+    employeeCode: 'EMP-003',
+    department: 'Human Resources',
+    branch: 'Lahore Head Office',
+    designation: 'HR Business Partner',
+    basicSalary: 5200,
+    houseAllowance: 1040,
+    transportAllowance: 350,
+    medicalAllowance: 250,
+    overtimeHours: 0,
+    overtimePay: 0,
+    grossSalary: 6840.0,
+    incomeTax: 801.5,
+    providentFund: 260.0,
+    attendancePenalty: 0,
+    totalDeductions: 1061.5,
+    netSalary: 5778.5,
+    status: 'APPROVED',
+    bankAccount: 'PK36MEZN0000004455667703',
+  },
+  {
+    id: 'ps-007',
+    employeeId: '7',
+    employeeName: 'Sana Malik',
+    employeeCode: 'EMP-007',
+    department: 'Sales & BD',
+    branch: 'Islamabad Regional Branch',
+    designation: 'Regional Sales Manager',
+    basicSalary: 7000,
+    houseAllowance: 1400,
+    transportAllowance: 500,
+    medicalAllowance: 350,
+    overtimeHours: 6.0,
+    overtimePay: 262.5,
+    grossSalary: 9512.5,
+    incomeTax: 1402.81,
+    providentFund: 350.0,
+    attendancePenalty: 0,
+    totalDeductions: 1752.81,
+    netSalary: 7759.69,
+    status: 'APPROVED',
+    bankAccount: 'PK36UBL00000002233445507',
+  },
+];
 
 const INITIAL_EMPLOYEES: Employee[] = [
   { id: '1', code: 'EMP-001', name: 'Muhammad Ahmed', email: 'ahmed@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00' },
@@ -199,7 +320,7 @@ const INITIAL_TIMESHEETS: TimesheetRecord[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'agent' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'agent' | 'payroll' | 'audit'>('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [events, setEvents] = useState<AttendanceEvent[]>(INITIAL_EVENTS);
@@ -268,6 +389,13 @@ export default function App() {
   ]);
   const [chatInput, setChatInput] = useState<string>('');
   const [isAgentThinking, setIsAgentThinking] = useState<boolean>(false);
+
+  // Payroll Management State (Phase 7)
+  const [payslips, setPayslips] = useState<PayslipUiRecord[]>(INITIAL_PAYSLIPS);
+  const [selectedPayslip, setSelectedPayslip] = useState<PayslipUiRecord | null>(null);
+  const [payrollPeriodStatus, setPayrollPeriodStatus] = useState<'DRAFT' | 'REVIEW' | 'LOCKED'>('REVIEW');
+  const [isPayrollRunning, setIsPayrollRunning] = useState<boolean>(false);
+  const [payrollNotification, setPayrollNotification] = useState<string | null>(null);
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -617,6 +745,32 @@ export default function App() {
     }, 600);
   };
 
+  // Payroll Action Handlers (Phase 7)
+  const handleTriggerPayrollRun = () => {
+    if (payrollPeriodStatus === 'LOCKED') {
+      setPayrollNotification('Cannot re-calculate a LOCKED payroll period. Locked records are legally finalized.');
+      setTimeout(() => setPayrollNotification(null), 5000);
+      return;
+    }
+
+    setIsPayrollRunning(true);
+    setPayrollNotification('Calculating multi-tenant attendance timesheets, overtime multipliers, and progressive tax slabs...');
+
+    setTimeout(() => {
+      setIsPayrollRunning(false);
+      setPayslips([...INITIAL_PAYSLIPS]);
+      setPayrollPeriodStatus('REVIEW');
+      setPayrollNotification('Monthly Payroll Batch Executed: 22 employees processed across 3 branches. Total Net: $118,240.50.');
+      setTimeout(() => setPayrollNotification(null), 6000);
+    }, 1200);
+  };
+
+  const handleLockPayrollPeriod = () => {
+    setPayrollPeriodStatus('LOCKED');
+    setPayrollNotification('Payroll Period LOCKED & Finalized. Immutable ledger timestamped by Super Admin. Modifying past biometric punches will no longer affect these locked payslips.');
+    setTimeout(() => setPayrollNotification(null), 6000);
+  };
+
   const getSourceIcon = (source: AttendanceEvent['source']) => {
     switch (source) {
       case 'CAMERA':
@@ -800,6 +954,27 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => setActiveTab('payroll')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              background: activeTab === 'payroll' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+              color: activeTab === 'payroll' ? '#34d399' : 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <DollarSign style={{ width: '18px', height: '18px', color: '#34d399' }} />
+            <span>Payroll Management</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('audit')}
             style={{
               display: 'flex',
@@ -827,16 +1002,12 @@ export default function App() {
             Modules Roadmap
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <DollarSign style={{ width: '16px', height: '16px' }} />
-            <span>Payroll Engine (Phase 5)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             <CheckSquare style={{ width: '16px', height: '16px' }} />
-            <span>Task Management (Phase 6)</span>
+            <span>Task Management (Phase 8)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <Sparkles style={{ width: '16px', height: '16px', color: '#a855f7' }} />
-            <span style={{ color: '#c084fc' }}>Voice AI Assistant (Phase 7)</span>
+            <FileText style={{ width: '16px', height: '16px' }} />
+            <span>Advanced Reports & Audits (Phase 9)</span>
           </div>
         </nav>
 
@@ -2548,6 +2719,463 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PAYROLL MANAGEMENT TAB (PHASE 7) */}
+        {activeTab === 'payroll' && (
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '10px', color: '#34d399' }}>
+                    <DollarSign style={{ width: '24px', height: '24px' }} />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Automated Enterprise Payroll & Salary Engine</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
+                      Attendance-reconciled compensation engine. Multi-interval worked hours, approved overtime (1.5x), progressive tax, and payslips.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <span className="badge badge-info" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar style={{ width: '13px', height: '13px' }} />
+                  <span>Period: September 2026</span>
+                </span>
+                <span className={`badge ${payrollPeriodStatus === 'LOCKED' ? 'badge-success' : 'badge-warning'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {payrollPeriodStatus === 'LOCKED' ? <Lock style={{ width: '13px', height: '13px' }} /> : <Clock style={{ width: '13px', height: '13px' }} />}
+                  <span>Status: {payrollPeriodStatus}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Notification Banner */}
+            {payrollNotification && (
+              <div
+                style={{
+                  background: payrollPeriodStatus === 'LOCKED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                  border: payrollPeriodStatus === 'LOCKED' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(99, 102, 241, 0.3)',
+                  color: payrollPeriodStatus === 'LOCKED' ? '#6ee7b7' : '#a5b4fc',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '0.88rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <CheckCircle2 style={{ width: '18px', height: '18px', flexShrink: 0 }} />
+                <span>{payrollNotification}</span>
+              </div>
+            )}
+
+            {/* Top Metric Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div className="glass-panel" style={{ padding: '18px' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                  Total Gross Payroll
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
+                  $33,252.81
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>
+                  Basic + Allowances + Overtime
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '18px' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                  Net Payout Disbursed
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#10b981', marginTop: '6px' }}>
+                  $27,372.60
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Ready for Direct Bank Wire
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '18px' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                  Progressive Tax Withheld
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f59e0b', marginTop: '6px' }}>
+                  $4,531.88
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Statutory 5-Bracket Tax Slabs
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '18px' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                  Approved Overtime Pay
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#38bdf8', marginTop: '6px' }}>
+                  $522.81
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  12.5 hrs @ 1.5x Hourly Rate
+                </div>
+              </div>
+            </div>
+
+            {/* Payroll Batch Controls Card */}
+            <div className="glass-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#fff' }}>September 2026 Monthly Payroll Cycle</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Calculated from 22 active employees across Lahore HQ and Islamabad Tech Hub.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={handleTriggerPayrollRun}
+                  disabled={isPayrollRunning || payrollPeriodStatus === 'LOCKED'}
+                  style={{
+                    background: payrollPeriodStatus === 'LOCKED' ? 'rgba(255, 255, 255, 0.05)' : 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: isPayrollRunning || payrollPeriodStatus === 'LOCKED' ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    opacity: payrollPeriodStatus === 'LOCKED' ? 0.5 : 1,
+                  }}
+                >
+                  <DollarSign style={{ width: '16px', height: '16px' }} />
+                  <span>{isPayrollRunning ? 'Calculating Batch...' : 'Recalculate Batch Run'}</span>
+                </button>
+
+                <button
+                  onClick={handleLockPayrollPeriod}
+                  disabled={payrollPeriodStatus === 'LOCKED'}
+                  style={{
+                    background: payrollPeriodStatus === 'LOCKED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    border: payrollPeriodStatus === 'LOCKED' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                    color: payrollPeriodStatus === 'LOCKED' ? '#6ee7b7' : '#fca5a5',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: payrollPeriodStatus === 'LOCKED' ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Lock style={{ width: '16px', height: '16px' }} />
+                  <span>{payrollPeriodStatus === 'LOCKED' ? 'Period Finalized (LOCKED)' : 'Lock & Finalize Period'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Payslips Table */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Itemized Employee Payslips ({payslips.length})</h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Statutory Deductions & Overtime Calculated
+                </span>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                      <th style={{ padding: '12px 14px' }}>Employee</th>
+                      <th style={{ padding: '12px 14px' }}>Department</th>
+                      <th style={{ padding: '12px 14px' }}>Basic Pay</th>
+                      <th style={{ padding: '12px 14px' }}>Allowances</th>
+                      <th style={{ padding: '12px 14px' }}>Overtime Pay</th>
+                      <th style={{ padding: '12px 14px' }}>Total Deductions</th>
+                      <th style={{ padding: '12px 14px' }}>Net Salary</th>
+                      <th style={{ padding: '12px 14px' }}>Status</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payslips.map((ps) => (
+                      <tr
+                        key={ps.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <td style={{ padding: '14px' }}>
+                          <div style={{ fontWeight: 600, color: '#fff' }}>{ps.employeeName}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{ps.employeeCode} • {ps.designation}</div>
+                        </td>
+                        <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>{ps.department}</td>
+                        <td style={{ padding: '14px', color: '#fff', fontWeight: 500 }}>${ps.basicSalary.toLocaleString()}</td>
+                        <td style={{ padding: '14px', color: '#a5b4fc' }}>+${(ps.houseAllowance + ps.transportAllowance + ps.medicalAllowance).toLocaleString()}</td>
+                        <td style={{ padding: '14px', color: '#38bdf8' }}>
+                          +${ps.overtimePay.toFixed(2)}
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ps.overtimeHours} hrs @ 1.5x</div>
+                        </td>
+                        <td style={{ padding: '14px', color: '#f87171' }}>
+                          -${ps.totalDeductions.toFixed(2)}
+                          {ps.attendancePenalty > 0 && (
+                            <div style={{ fontSize: '0.7rem', color: '#f59e0b' }}>-${ps.attendancePenalty.toFixed(2)} late penalty</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '14px', fontWeight: 700, color: '#10b981', fontSize: '0.95rem' }}>
+                          ${ps.netSalary.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <span className="badge badge-success">{ps.status}</span>
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => setSelectedPayslip(ps)}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              color: '#a5b4fc',
+                              borderRadius: '6px',
+                              padding: '6px 12px',
+                              fontSize: '0.78rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            View Payslip
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DIGITAL PAYSLIP MODAL */}
+        {selectedPayslip && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '20px',
+            }}
+          >
+            <div
+              className="glass-panel"
+              style={{
+                width: '100%',
+                maxWidth: '680px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: '28px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DollarSign style={{ width: '22px', height: '22px', color: '#10b981' }} />
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#fff' }}>Official Salary Voucher & Payslip</h2>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>
+                    Demo Enterprise Corporation • Tax NTN: 9988210-4 • Pay Cycle: September 2026
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedPayslip(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X style={{ width: '16px', height: '16px' }} />
+                </button>
+              </div>
+
+              {/* Employee Information Card */}
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.82rem' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Employee Name:</span>
+                  <div style={{ fontWeight: 600, color: '#fff' }}>{selectedPayslip.employeeName}</div>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Employee Code:</span>
+                  <div style={{ fontWeight: 600, color: '#a5b4fc' }}>{selectedPayslip.employeeCode}</div>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Designation:</span>
+                  <div style={{ color: '#fff' }}>{selectedPayslip.designation}</div>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Department & Branch:</span>
+                  <div style={{ color: '#fff' }}>{selectedPayslip.department} [{selectedPayslip.branch}]</div>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Bank IBAN:</span>
+                  <div style={{ color: '#fff', fontFamily: 'monospace' }}>{selectedPayslip.bankAccount}</div>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span>
+                  <div style={{ color: '#10b981', fontWeight: 600 }}>Automated Direct Deposit</div>
+                </div>
+              </div>
+
+              {/* Earnings vs Deductions Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Earnings Column */}
+                <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontWeight: 600, color: '#10b981', marginBottom: '10px', fontSize: '0.88rem' }}>
+                    Earnings & Additions
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Basic Salary</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>${selectedPayslip.basicSalary.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>House Rent (HRA)</span>
+                      <span style={{ color: '#fff' }}>${selectedPayslip.houseAllowance.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Transport Allowance</span>
+                      <span style={{ color: '#fff' }}>${selectedPayslip.transportAllowance.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Medical Allowance</span>
+                      <span style={{ color: '#fff' }}>${selectedPayslip.medicalAllowance.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Overtime Pay ({selectedPayslip.overtimeHours}h @ 1.5x)</span>
+                      <span style={{ color: '#38bdf8' }}>+${selectedPayslip.overtimePay.toFixed(2)}</span>
+                    </div>
+                    <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#fff' }}>
+                      <span>Gross Salary</span>
+                      <span>${selectedPayslip.grossSalary.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Deductions Column */}
+                <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontWeight: 600, color: '#f87171', marginBottom: '10px', fontSize: '0.88rem' }}>
+                    Statutory Deductions
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Income Tax (Slab)</span>
+                      <span style={{ color: '#f87171' }}>-${selectedPayslip.incomeTax.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Provident Fund (5%)</span>
+                      <span style={{ color: '#f87171' }}>-${selectedPayslip.providentFund.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Lateness / Unpaid Penalty</span>
+                      <span style={{ color: selectedPayslip.attendancePenalty > 0 ? '#f59e0b' : 'var(--text-muted)' }}>
+                        -${selectedPayslip.attendancePenalty.toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#f87171' }}>
+                      <span>Total Deductions</span>
+                      <span>-${selectedPayslip.totalDeductions.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Net Payout Banner */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25))',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  borderRadius: '12px',
+                  padding: '18px 24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Net Take-Home Pay (Direct Wire)
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', marginTop: '4px' }}>
+                    ${selectedPayslip.netSalary.toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span className="badge badge-success">DISBURSEMENT AUTHORIZED</span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Verified via Central Attendance Engine
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Printer style={{ width: '16px', height: '16px' }} />
+                  <span>Print Payslip</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPayslip(null)}
+                  style={{
+                    background: 'var(--accent-gradient)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 20px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

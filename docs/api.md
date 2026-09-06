@@ -155,6 +155,16 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 * `GET /api/v1/agent/tools` - Introspect list of available tools, descriptions, parameter schemas, and permissions for authenticated user role.
 * `GET /api/v1/agent/conversations/:id` - Retrieve full chronological message and tool execution trace history for an active session.
 
+---
 
+## 10. Phase 7 Enterprise Payroll & Salary Engine (`/api/v1/payroll`)
 
+### Salary Structure Configuration
+* `POST /api/v1/payroll/salary-structure` - Define or update employee base salary, standard allowances (housing, transport, medical), custom deductions, and currency
+* `GET /api/v1/payroll/salary-structure/:employeeId` - Retrieve active salary breakdown and compensation parameters for an employee
 
+### Payroll Periods & Reconciliation Runs
+* `POST /api/v1/payroll/periods` - Open a monthly or custom payroll processing window
+* `POST /api/v1/payroll/periods/:periodId/run` - Execute batch payroll computation. Reconciles raw multi-interval punches, applies overtime multipliers ($1.5\times$), deducts unapproved absences and lateness infractions, and applies progressive income tax slabs ($0\% - 35\%$) and statutory Provident Fund ($5\%$)
+* `POST /api/v1/payroll/periods/:periodId/lock` - Seal and finalize payroll period. Enforces immutability: locked periods reject subsequent batch re-runs and historical modifications
+* `GET /api/v1/payroll/periods/:periodId/payslips` - Retrieve itemized digital payslips for all processed employees within the period
