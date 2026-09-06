@@ -19,8 +19,9 @@ echo "  Directory: $APP_DIR"
 echo "=========================================================="
 
 echo "-> [0/3] Syncing latest code from GitHub main..."
-git stash 2>/dev/null || true
-git pull origin main || echo "Git pull notice: Proceeding with existing code files..."
+chattr -i "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+git fetch origin main || true
+git reset --hard origin/main || git pull origin main || true
 
 # Create directories
 mkdir -p logs
