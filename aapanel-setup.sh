@@ -9,6 +9,9 @@ set -e
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+# Allow Git operations inside aaPanel directory without dubious ownership warning
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
 echo "=========================================================="
 echo "  AttendanceAI: Initializing for aaPanel..."
 echo "  Directory: $APP_DIR"
@@ -43,6 +46,12 @@ npx prisma generate
 npx prisma db push --accept-data-loss
 npm run build
 
+# Remove immutable flag from aaPanel's .user.ini if present to prevent Vite EPERM errors
+if [ -f "$APP_DIR/frontend/dist/.user.ini" ]; then
+  chattr -i "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+  rm -f "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+fi
+
 # Install dependencies and build frontend
 echo "-> [2/3] Building frontend production bundle..."
 cd "$APP_DIR/frontend"
@@ -58,7 +67,7 @@ cd "$APP_DIR"
 echo ""
 echo "=========================================================="
 echo "  INITIALIZATION FINISHED SUCCESSFULLY!"
-echo "  1. Backend build ready: backend/dist/server.js"
+echo "  1. Backend build ready: backend/dist/server.js (Port 3041)"
 echo "  2. Frontend build ready: frontend/dist"
 echo "  You can now start the Node project in aaPanel UI!"
 echo "=========================================================="

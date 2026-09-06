@@ -9,6 +9,14 @@ set -e
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
+# Unlock .user.ini if created by aaPanel
+if [ -f "$APP_DIR/frontend/dist/.user.ini" ]; then
+  chattr -i "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+  rm -f "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+fi
+
 echo "--------------------------------------------------------"
 echo "  Deploying AttendanceAI Platform on $(hostname)"
 echo "  Directory: $APP_DIR"
