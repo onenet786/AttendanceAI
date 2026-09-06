@@ -8,10 +8,12 @@ coverage/
 *.lcov
 
 # Production & Build outputs
-dist/
 build/
 .next/
 out/
+backend/dist/
+!frontend/dist/
+!frontend/dist/**
 
 # Environment files
 .env
