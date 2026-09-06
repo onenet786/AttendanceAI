@@ -31,8 +31,7 @@ import {
   Lock,
   Bell,
   BarChart3,
-  Plus,
-  Check
+  Plus
 } from 'lucide-react';
 
 interface Employee {
@@ -556,6 +555,7 @@ export default function App() {
   const [payslips, setPayslips] = useState<PayslipUiRecord[]>(INITIAL_PAYSLIPS);
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipUiRecord | null>(null);
   const [payrollPeriodStatus, setPayrollPeriodStatus] = useState<'DRAFT' | 'REVIEW' | 'LOCKED'>('REVIEW');
+  const [isPayrollRunning, setIsPayrollRunning] = useState<boolean>(false);
   const [payrollNotification, setPayrollNotification] = useState<string | null>(null);
 
   // Tasks & Kanban State (Phase 8)
@@ -575,7 +575,6 @@ export default function App() {
 
   // Reports & Analytics State (Phase 9)
   const [exportNotice, setExportNotice] = useState<string | null>(null);
-  const [selectedReportView, setSelectedReportView] = useState<'ATTENDANCE' | 'PAYROLL' | 'BRANCHES'>('ATTENDANCE');
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -1355,27 +1354,175 @@ export default function App() {
             </select>
           </div>
 
-          {/* User Account Info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>Super Admin</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>admin@democompany.com</div>
+          {/* Notifications & User Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', position: 'relative' }}>
+            {/* Notification Bell Button */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsNotifTrayOpen(!isNotifTrayOpen)}
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: isNotifTrayOpen ? '#fff' : 'var(--text-secondary)',
+                  position: 'relative',
+                }}
+              >
+                <Bell style={{ width: '18px', height: '18px' }} />
+                {notifications.filter((n) => !n.isRead).length > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid var(--bg-secondary)',
+                    }}
+                  >
+                    {notifications.filter((n) => !n.isRead).length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Tray Dropdown */}
+              {isNotifTrayOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50px',
+                    right: 0,
+                    width: '380px',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+                    zIndex: 1000,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '14px 18px',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Bell style={{ width: '16px', height: '16px', color: '#818cf8' }} />
+                      <span>Security & System Alerts</span>
+                    </div>
+                    <button
+                      onClick={handleMarkAllNotifsRead}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#818cf8',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+
+                  <div style={{ maxHeight: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    {notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleMarkNotifRead(notif.id)}
+                        style={{
+                          padding: '12px 18px',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          background: notif.isRead ? 'transparent' : 'rgba(99, 102, 241, 0.06)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              background:
+                                notif.severity === 'CRITICAL'
+                                  ? 'rgba(239, 68, 68, 0.15)'
+                                  : notif.severity === 'WARNING'
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(56, 189, 248, 0.15)',
+                              color:
+                                notif.severity === 'CRITICAL'
+                                  ? '#f87171'
+                                  : notif.severity === 'WARNING'
+                                  ? '#fbbf24'
+                                  : '#38bdf8',
+                            }}
+                          >
+                            {notif.severity}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{notif.timeAgo}</span>
+                        </div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff', marginTop: '2px' }}>
+                          {notif.title}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                          {notif.message}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ padding: '10px', textAlign: 'center', background: 'rgba(0, 0, 0, 0.2)', borderTop: '1px solid var(--border-subtle)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HMAC Webhook Gateway: Active</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: 'var(--accent-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-              }}
-            >
-              SA
+
+            {/* User Account Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>Super Admin</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>admin@democompany.com</div>
+              </div>
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: 'var(--accent-gradient)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                }}
+              >
+                SA
+              </div>
             </div>
           </div>
         </header>
@@ -3470,6 +3617,659 @@ export default function App() {
                   }}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            TASK & PROJECT MANAGEMENT (PHASE 8 KANBAN)
+            =================================================================== */}
+        {activeTab === 'tasks' && (
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header & Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(56, 189, 248, 0.15)', borderRadius: '10px', color: '#38bdf8' }}>
+                    <CheckSquare style={{ width: '24px', height: '24px' }} />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Task & Project Management (Kanban)</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
+                      Multi-tenant project sprints, task allocation, and biometric attendance-to-task time tracking verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={selectedTaskProject}
+                  onChange={(e) => setSelectedTaskProject(e.target.value)}
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Active Projects</option>
+                  <option value="PRJ-MOB">Mobile Workforce PWA</option>
+                  <option value="PRJ-CCTV">AI Edge Computer Vision Gateways</option>
+                  <option value="PRJ-VOICE">Voice AI & Speech Ingress</option>
+                  <option value="PRJ-FIN">Enterprise Payroll Engine</option>
+                  <option value="PRJ-INFRA">Infrastructure & Coexistence</option>
+                </select>
+
+                <button
+                  onClick={() => setIsNewTaskModalOpen(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  <span>New Sprint Task</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Attendance-to-Task Reconciliation Banner */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(14, 165, 233, 0.15))',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <CheckCircle2 style={{ width: '22px', height: '22px', color: '#38bdf8' }} />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>
+                    Attendance Engine Cross-Verification Active
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Task logged hours automatically reconcile against physical biometric turnstile and camera check-in intervals.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span className="badge badge-success">Audit Synced</span>
+                <span className="badge badge-info">Zero Phantom Hours</span>
+              </div>
+            </div>
+
+            {/* Kanban Columns (4 Columns) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              {(
+                [
+                  { key: 'TODO', title: 'To Do / Backlog', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' },
+                  { key: 'IN_PROGRESS', title: 'In Progress', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)' },
+                  { key: 'IN_REVIEW', title: 'In Review', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.1)' },
+                  { key: 'DONE', title: 'Done / Verified', color: '#34d399', bg: 'rgba(16, 185, 129, 0.1)' },
+                ] as const
+              ).map((column) => {
+                const columnTasks = tasks.filter(
+                  (t) =>
+                    t.status === column.key &&
+                    (selectedTaskProject === 'ALL' || t.projectId === selectedTaskProject)
+                );
+
+                return (
+                  <div
+                    key={column.key}
+                    style={{
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      minHeight: '480px',
+                    }}
+                  >
+                    {/* Column Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: column.color }} />
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>{column.title}</span>
+                      </div>
+                      <span
+                        style={{
+                          background: column.bg,
+                          color: column.color,
+                          borderRadius: '12px',
+                          padding: '2px 8px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {columnTasks.length}
+                      </span>
+                    </div>
+
+                    {/* Task Cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                      {columnTasks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '32px 10px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                          No tasks in this lane
+                        </div>
+                      ) : (
+                        columnTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            style={{
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--border-subtle)',
+                              borderRadius: '10px',
+                              padding: '14px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background:
+                                    task.priority === 'URGENT'
+                                      ? 'rgba(239, 68, 68, 0.2)'
+                                      : task.priority === 'HIGH'
+                                      ? 'rgba(245, 158, 11, 0.2)'
+                                      : 'rgba(56, 189, 248, 0.2)',
+                                  color:
+                                    task.priority === 'URGENT'
+                                      ? '#f87171'
+                                      : task.priority === 'HIGH'
+                                      ? '#fbbf24'
+                                      : '#38bdf8',
+                                }}
+                              >
+                                {task.priority}
+                              </span>
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{task.projectName}</span>
+                            </div>
+
+                            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#fff', lineHeight: 1.3 }}>
+                              {task.title}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                              {task.description}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <img
+                                  src={task.assigneePhoto}
+                                  alt={task.assigneeName}
+                                  style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
+                                />
+                                <span style={{ color: '#fff' }}>{task.assigneeName}</span>
+                              </div>
+                              <div style={{ color: 'var(--text-secondary)' }}>
+                                {task.actualHours}h / {task.estimatedHours}h
+                              </div>
+                            </div>
+
+                            {/* Status Shift Controls */}
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+                              {column.key !== 'TODO' && (
+                                <button
+                                  onClick={() => handleMoveTask(task.id, column.key === 'DONE' ? 'IN_REVIEW' : column.key === 'IN_REVIEW' ? 'IN_PROGRESS' : 'TODO')}
+                                  style={{
+                                    flex: 1,
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: '6px',
+                                    color: 'var(--text-secondary)',
+                                    padding: '4px',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  ← Back
+                                </button>
+                              )}
+                              {column.key !== 'DONE' && (
+                                <button
+                                  onClick={() => handleMoveTask(task.id, column.key === 'TODO' ? 'IN_PROGRESS' : column.key === 'IN_PROGRESS' ? 'IN_REVIEW' : 'DONE')}
+                                  style={{
+                                    flex: 1,
+                                    background: 'rgba(56, 189, 248, 0.1)',
+                                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                                    borderRadius: '6px',
+                                    color: '#38bdf8',
+                                    padding: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {column.key === 'IN_REVIEW' ? 'Approve & Done ✓' : 'Advance →'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            EXECUTIVE REPORTS & ANALYTICS HUB (PHASE 9)
+            =================================================================== */}
+        {activeTab === 'reports' && (
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header & Export Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '10px', color: '#fbbf24' }}>
+                    <BarChart3 style={{ width: '24px', height: '24px' }} />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Executive Reports & Analytics Hub</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
+                      Automated enterprise attendance compliance indices, punctuality trends, and instant export generators.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1-Click Export Actions */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleExportReport('CSV')}
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Download style={{ width: '15px', height: '15px', color: '#34d399' }} />
+                  <span>Download CSV</span>
+                </button>
+
+                <button
+                  onClick={() => handleExportReport('JSON')}
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <FileText style={{ width: '15px', height: '15px', color: '#38bdf8' }} />
+                  <span>Download JSON</span>
+                </button>
+
+                <button
+                  onClick={() => handleExportReport('PRINT')}
+                  style={{
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.35)',
+                  }}
+                >
+                  <Printer style={{ width: '15px', height: '15px' }} />
+                  <span>Print Executive Report</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Notification Banner */}
+            {exportNotice && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  borderRadius: '10px',
+                  padding: '12px 18px',
+                  color: '#6ee7b7',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <CheckCircle2 style={{ width: '18px', height: '18px' }} />
+                <span>{exportNotice}</span>
+              </div>
+            )}
+
+            {/* Executive KPI Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Overall Attendance Rate</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', marginTop: '6px' }}>91.8%</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>+2.4% vs last month</div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Punctuality Compliance Index</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#38bdf8', marginTop: '6px' }}>86.4%</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Excluding 15m grace window</div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Worked Hours</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', marginTop: '6px' }}>3,640.5 hrs</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Reconciled across all punches</div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Overtime Disbursed (1.5x)</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fbbf24', marginTop: '6px' }}>142.0 hrs</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>100% Manager Authorized</div>
+              </div>
+            </div>
+
+            {/* Branch Comparison Table */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Branch Operational Comparison</h3>
+                <span className="badge badge-info">September 2026 Cycle</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '10px 14px' }}>Branch</th>
+                    <th style={{ padding: '10px 14px' }}>Branch Code</th>
+                    <th style={{ padding: '10px 14px' }}>Active Staff</th>
+                    <th style={{ padding: '10px 14px' }}>Attendance Rate</th>
+                    <th style={{ padding: '10px 14px' }}>Punctuality Rate</th>
+                    <th style={{ padding: '10px 14px' }}>Hardware Gateways</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#fff' }}>Lahore Head Office</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>LHR-01</td>
+                    <td style={{ padding: '12px 14px', color: '#fff' }}>14 Employees</td>
+                    <td style={{ padding: '12px 14px', color: '#34d399', fontWeight: 700 }}>93.2%</td>
+                    <td style={{ padding: '12px 14px', color: '#38bdf8', fontWeight: 700 }}>88.0%</td>
+                    <td style={{ padding: '12px 14px' }}><span className="badge badge-success">3 Online (RTSP)</span></td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#fff' }}>Islamabad Regional Branch</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>ISB-01</td>
+                    <td style={{ padding: '12px 14px', color: '#fff' }}>8 Employees</td>
+                    <td style={{ padding: '12px 14px', color: '#34d399', fontWeight: 700 }}>89.4%</td>
+                    <td style={{ padding: '12px 14px', color: '#38bdf8', fontWeight: 700 }}>83.5%</td>
+                    <td style={{ padding: '12px 14px' }}><span className="badge badge-success">3 Online (RTSP)</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* CREATE TASK MODAL */}
+        {isNewTaskModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '20px',
+            }}
+          >
+            <div
+              className="glass-panel"
+              style={{
+                width: '100%',
+                maxWidth: '520px',
+                padding: '28px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>Create New Project Sprint Task</h3>
+                <button
+                  onClick={() => setIsNewTaskModalOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                  <X style={{ width: '20px', height: '20px' }} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Task Title
+                  </label>
+                  <input
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    placeholder="e.g. Calibrate RTSP facial embedding threshold"
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={newTaskDesc}
+                    onChange={(e) => setNewTaskDesc(e.target.value)}
+                    placeholder="Provide acceptance criteria..."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      resize: 'none',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Project
+                    </label>
+                    <select
+                      value={newTaskProject}
+                      onChange={(e) => setNewTaskProject(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="PRJ-MOB">Mobile Workforce PWA</option>
+                      <option value="PRJ-CCTV">AI Edge CV Gateways</option>
+                      <option value="PRJ-VOICE">Voice AI & Speech Ingress</option>
+                      <option value="PRJ-FIN">Enterprise Payroll Engine</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Priority
+                    </label>
+                    <select
+                      value={newTaskPriority}
+                      onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="URGENT">Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Estimated Hours
+                    </label>
+                    <input
+                      type="number"
+                      value={newTaskHours}
+                      onChange={(e) => setNewTaskHours(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Assignee
+                    </label>
+                    <select
+                      value={newTaskAssignee}
+                      onChange={(e) => setNewTaskAssignee(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="Muhammad Ahmed">Muhammad Ahmed (IT)</option>
+                      <option value="Bilal Hassan">Bilal Hassan (IT)</option>
+                      <option value="Ayesha Khan">Ayesha Khan (HR)</option>
+                      <option value="Hamza Tariq">Hamza Tariq (Finance)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                <button
+                  onClick={() => setIsNewTaskModalOpen(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    color: 'var(--text-secondary)',
+                    padding: '10px 18px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateNewTask}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    padding: '10px 20px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Create Task
                 </button>
               </div>
             </div>

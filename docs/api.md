@@ -168,3 +168,44 @@ X-Tenant-ID: <tenant-uuid-or-slug>
 * `POST /api/v1/payroll/periods/:periodId/run` - Execute batch payroll computation. Reconciles raw multi-interval punches, applies overtime multipliers ($1.5\times$), deducts unapproved absences and lateness infractions, and applies progressive income tax slabs ($0\% - 35\%$) and statutory Provident Fund ($5\%$)
 * `POST /api/v1/payroll/periods/:periodId/lock` - Seal and finalize payroll period. Enforces immutability: locked periods reject subsequent batch re-runs and historical modifications
 * `GET /api/v1/payroll/periods/:periodId/payslips` - Retrieve itemized digital payslips for all processed employees within the period
+
+---
+
+## 11. Phase 8 Task & Project Management (`/api/v1/tasks`)
+
+### Projects
+* `GET /api/v1/tasks/projects` - List all active projects with budget and logged hours
+* `POST /api/v1/tasks/projects` - Create new project container
+
+### Tasks & Kanban
+* `GET /api/v1/tasks` - List tasks with optional `projectId` filter
+* `POST /api/v1/tasks` - Create task with priority, estimates, and assigned employee
+* `PATCH /api/v1/tasks/:taskId/status` - Transition Kanban status (`TODO`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`)
+
+### Attendance-to-Task Verification
+* `POST /api/v1/tasks/time-logs` - Log project task execution hours
+* `GET /api/v1/tasks/reconciliation` - Reconcile clocked attendance hours vs task logged hours to eliminate phantom hours
+
+---
+
+## 12. Phase 9 Comprehensive Reports & Analytics (`/api/v1/analytics`)
+
+* `GET /api/v1/analytics/attendance` - Executive attendance compliance index, punctuality rate, and branch comparison
+* `GET /api/v1/analytics/payroll` - Departmental payroll disbursement summary
+* `GET /api/v1/analytics/export` - Export datasets in RFC 4180 CSV, structured JSON, or print-ready HTML/PDF (`?type=attendance&format=CSV`)
+
+---
+
+## 13. Phase 10 Multi-Channel Notifications & Webhooks (`/api/v1/notifications`)
+
+### In-App Notifications
+* `GET /api/v1/notifications` - Retrieve list of administrative and system notifications
+* `GET /api/v1/notifications/unread-count` - Get count of unread notifications for badge display
+* `PATCH /api/v1/notifications/:id/read` - Mark single notification as read
+* `POST /api/v1/notifications/read-all` - Mark all notifications as read
+* `GET /api/v1/notifications/watchdog` - Run automated attendance watchdog (consecutive absence, overtime threshold, device silence)
+
+### Webhooks
+* `POST /api/v1/notifications/webhooks` - Register new webhook subscription (`targetUrl`, `events`)
+* `GET /api/v1/notifications/webhooks` - List active webhook endpoints
+
