@@ -6,7 +6,8 @@ This guide is specifically written for your working **Ubuntu Server running aaPa
 > **Safety Guarantee for Existing Websites**:
 > - We create a **new, separate database** in the aaPanel UI. Your existing databases are completely untouched.
 > - We bind **new subdomains** (`api.yourdomain.com` and `app.yourdomain.com`). Your existing websites and virtual hosts are never modified or disrupted.
-> - The new backend runs on an isolated internal port (`4000`).
+> - The new backend runs on an isolated internal port (`3041`).
+- The frontend (if proxied via Node/serve) runs on port (`3042`).
 
 ---
 
@@ -49,7 +50,7 @@ cd attendance-ai
 5. Update your database connection string and domain URLs:
    ```ini
    NODE_ENV=production
-   PORT=4000
+   PORT=3041
    HOST=0.0.0.0
 
    APP_URL=https://app.yourdomain.com
@@ -101,20 +102,20 @@ chmod +x aapanel-setup.sh
    - **Project directory**: Select `/www/wwwroot/attendance-ai`
    - **Project name**: `attendance-api`
    - **Run Opt**: Select `start` (or enter `node backend/dist/server.js`)
-   - **Port**: `4000`
+   - **Port**: `3041`
    - **Node version**: Select your installed Node version (e.g. Node 20 or 22)
    - **Run as**: `www`
    - **Bind domain**: Enter your API subdomain, e.g. `api.yourdomain.com`
 4. Click **Submit**.
 
-> **Note**: aaPanel automatically manages the Node process, keeps it running on reboot, and sets up the Nginx reverse proxy to port `4000`!
+> **Note**: aaPanel automatically manages the Node process, keeps it running on reboot, and sets up the Nginx reverse proxy to port `3041`!
 
 ### Enable WebSockets for Live Attendance:
 1. In **Website** > **Node project**, click on `attendance-api` (or click **Config**).
 2. Open the **URL rewrite** or **Configuration** (Nginx config) tab and ensure WebSocket headers are included for `/socket.io/`:
    ```nginx
    location /socket.io/ {
-       proxy_pass http://127.0.0.1:4000/socket.io/;
+       proxy_pass http://127.0.0.1:3041/socket.io/;
        proxy_http_version 1.1;
        proxy_set_header Upgrade $http_upgrade;
        proxy_set_header Connection "Upgrade";

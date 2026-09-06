@@ -127,7 +127,7 @@ The host server already serves an active production website. The new SaaS platfo
 |---|---|---|
 | **Domain** | `existing-domain.com` | `app.yourdomain.com` & `api.yourdomain.com` |
 | **Database** | Existing DB on port 5432 | Dedicated DB: `attendance_ai_db` (dedicated user) |
-| **Application Process** | Existing PHP / Node process | PM2 cluster / Docker container on port `4000` (API) & `3000` (Web) |
+| **Application Process** | Existing PHP / Node process | PM2 cluster / Docker container on port `3041` (API) & `3042` (Web) |
 | **Reverse Proxy** | Main Nginx server block | Separate Nginx vhost configuration files |
 | **Storage & Uploads** | Existing web root | `/www/wwwroot/attendance-ai/storage/` |
 | **Logs** | Existing log files | `/www/wwwroot/attendance-ai/logs/` |

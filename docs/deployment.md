@@ -9,8 +9,8 @@ This guide details how to deploy the **AttendanceAI** SaaS platform onto an Ubun
 1. **Never touch existing site vhosts**: aaPanel maintains Nginx configurations under `/www/server/panel/vhost/nginx/`. The new platform uses its own isolated configuration blocks.
 2. **Never modify existing databases**: Create a distinct PostgreSQL database and dedicated database user with strict privileges limited only to `attendance_ai_db`.
 3. **Dedicated Port Allocations**:
-   - API Backend: Port `4000` (internal only, proxied via Nginx)
-   - Web Frontend: Port `3000` (internal only, proxied via Nginx)
+   - API Backend: Port `3041` (internal only, proxied via Nginx)
+   - Web Frontend: Port `3042` (internal only, proxied via Nginx)
    - Redis: Standard port `6379` using separate database index (e.g., `db 2` or key namespace `att_ai:*`)
 4. **Isolated Directories**:
    - Application root: `/www/wwwroot/attendance-ai/`
@@ -75,7 +75,7 @@ server {
 
     # API Proxy
     location / {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3041;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -89,7 +89,7 @@ server {
 
     # WebSocket / Socket.IO
     location /socket.io/ {
-        proxy_pass http://127.0.0.1:4000/socket.io/;
+        proxy_pass http://127.0.0.1:3041/socket.io/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -130,7 +130,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3042;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -166,7 +166,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 4000
+        PORT: 3041
       },
       error_file: './logs/pm2_backend_error.log',
       out_file: './logs/pm2_backend_out.log',
@@ -174,13 +174,13 @@ module.exports = {
     },
     {
       name: 'attendance-frontend-web',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start frontend -p 3000',
+      script: 'npx',
+      args: 'serve -s frontend/dist -l 3042',
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3042
       },
       error_file: './logs/pm2_frontend_error.log',
       out_file: './logs/pm2_frontend_out.log',

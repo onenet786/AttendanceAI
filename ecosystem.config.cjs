@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 4000,
+        PORT: 3041,
       },
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
@@ -20,13 +20,13 @@ module.exports = {
     {
       name: 'attendance-frontend',
       script: 'npx',
-      args: 'serve -s frontend/dist -l 3000',
+      args: 'serve -s frontend/dist -l 3042',
       cwd: './',
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 3042,
       },
       error_file: './logs/frontend-error.log',
       out_file: './logs/frontend-out.log',

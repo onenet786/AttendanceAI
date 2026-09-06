@@ -46,7 +46,7 @@ npm run seed
 npm run dev
 ```
 
-The API will be available at `http://localhost:4000`, and OpenAPI / Swagger documentation at `http://localhost:4000/api/v1/docs`.
+The API will be available at `http://localhost:3041`, and OpenAPI / Swagger documentation at `http://localhost:3041/api/v1/docs`.
 
 ### 2. Frontend Setup
 ```bash
@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-The Web Application will be available at `http://localhost:3000`.
+The Web Application will be available at `http://localhost:3042`.
 
 ---
 

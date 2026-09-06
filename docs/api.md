@@ -3,9 +3,9 @@
 ## 1. Base URL & Versioning
 
 All API endpoints are versioned with `/api/v1/`:
-- **Development**: `http://localhost:4000/api/v1`
+- **Development**: `http://localhost:3041/api/v1`
 - **Production**: `https://api.yourdomain.com/api/v1`
-- **Interactive Swagger Documentation**: `http://localhost:4000/api/v1/docs`
+- **Interactive Swagger Documentation**: `http://localhost:3041/api/v1/docs`
 
 ---
 
