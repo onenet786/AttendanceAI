@@ -21,6 +21,9 @@ import camerasRoutes from './modules/cameras/cameras.routes.js';
 import voiceRoutes from './modules/voice/voice.routes.js';
 import agentRoutes from './modules/agent/agent.routes.js';
 import payrollRoutes from './modules/payroll/payroll.routes.js';
+import taskRoutes from './modules/tasks/tasks.routes.js';
+import analyticsRoutes from './modules/reports/analytics.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
 
 const app = express();
 
@@ -167,6 +170,9 @@ app.use('/api/v1/cameras', camerasRoutes);
 app.use('/api/v1/voice', voiceRoutes);
 app.use('/api/v1/agent', agentRoutes);
 app.use('/api/v1/payroll', payrollRoutes);
+app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // 404 Route Handler
 app.use((req: Request, res: Response) => {

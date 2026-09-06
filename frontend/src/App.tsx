@@ -28,7 +28,11 @@ import {
   Bot,
   Terminal,
   Printer,
-  Lock
+  Lock,
+  Bell,
+  BarChart3,
+  Plus,
+  Check
 } from 'lucide-react';
 
 interface Employee {
@@ -209,6 +213,164 @@ const INITIAL_PAYSLIPS: PayslipUiRecord[] = [
   },
 ];
 
+interface KanbanTask {
+  id: string;
+  title: string;
+  description: string;
+  projectId: string;
+  projectName: string;
+  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  assigneeName: string;
+  assigneePhoto: string;
+  estimatedHours: number;
+  actualHours: number;
+  dueDate: string;
+  attendanceVerified: boolean;
+}
+
+const INITIAL_TASKS: KanbanTask[] = [
+  {
+    id: 'tsk-1',
+    title: 'Cross-Platform Mobile QR Ingress with Offline SQLite Cache',
+    description: 'Build local queuing mechanism for mobile device when WAN disconnects',
+    projectId: 'PRJ-MOB',
+    projectName: 'Mobile Workforce PWA',
+    status: 'IN_PROGRESS',
+    priority: 'HIGH',
+    assigneeName: 'Muhammad Ahmed',
+    assigneePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    estimatedHours: 16,
+    actualHours: 12.5,
+    dueDate: 'Sep 12, 2026',
+    attendanceVerified: true,
+  },
+  {
+    id: 'tsk-2',
+    title: '512-Dim Normalized Facial Embedding Evaluation',
+    description: 'Calibrate passive liveness detection and cosine distance threshold',
+    projectId: 'PRJ-CCTV',
+    projectName: 'AI Edge Computer Vision Gateways',
+    status: 'IN_REVIEW',
+    priority: 'URGENT',
+    assigneeName: 'Bilal Hassan',
+    assigneePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    estimatedHours: 12,
+    actualHours: 11.0,
+    dueDate: 'Sep 10, 2026',
+    attendanceVerified: true,
+  },
+  {
+    id: 'tsk-3',
+    title: 'Acoustic Voiceprint Spectrogram Visualizer UI',
+    description: 'Dynamic canvas waveform reacting to live microphone voice punch',
+    projectId: 'PRJ-VOICE',
+    projectName: 'Voice AI & Speech Ingress',
+    status: 'TODO',
+    priority: 'MEDIUM',
+    assigneeName: 'Ayesha Khan',
+    assigneePhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+    estimatedHours: 8,
+    actualHours: 0,
+    dueDate: 'Sep 18, 2026',
+    attendanceVerified: false,
+  },
+  {
+    id: 'tsk-4',
+    title: 'Progressive Tax Slabs & Provident Fund Audit',
+    description: 'Statutory 5-slab progressive rate validation against legal compliance rules',
+    projectId: 'PRJ-FIN',
+    projectName: 'Enterprise Payroll Engine',
+    status: 'DONE',
+    priority: 'HIGH',
+    assigneeName: 'Hamza Tariq',
+    assigneePhoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+    estimatedHours: 10,
+    actualHours: 9.5,
+    dueDate: 'Sep 06, 2026',
+    attendanceVerified: true,
+  },
+  {
+    id: 'tsk-5',
+    title: 'Nginx aaPanel WebSocket Proxy & Port 3041 Routing',
+    description: 'Reverse proxy upgrade header configuration for real-time live events',
+    projectId: 'PRJ-INFRA',
+    projectName: 'Infrastructure & Coexistence',
+    status: 'DONE',
+    priority: 'URGENT',
+    assigneeName: 'Muhammad Ahmed',
+    assigneePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    estimatedHours: 6,
+    actualHours: 5.5,
+    dueDate: 'Sep 05, 2026',
+    attendanceVerified: true,
+  },
+  {
+    id: 'tsk-6',
+    title: 'HMAC Webhook Event Signatures & Retry Dispatcher',
+    description: 'SHA256 signature payload computation with delivery logs',
+    projectId: 'PRJ-INFRA',
+    projectName: 'Infrastructure & Coexistence',
+    status: 'TODO',
+    priority: 'LOW',
+    assigneeName: 'Usman Ali',
+    assigneePhoto: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+    estimatedHours: 8,
+    actualHours: 0,
+    dueDate: 'Sep 22, 2026',
+    attendanceVerified: false,
+  },
+];
+
+interface UiNotification {
+  id: string;
+  type: 'ATTENDANCE_BREACH' | 'OVERTIME_THRESHOLD' | 'GATEWAY_OFFLINE' | 'PAYROLL_SEALED' | 'TASK_ASSIGNED';
+  title: string;
+  message: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  isRead: boolean;
+  timeAgo: string;
+}
+
+const INITIAL_NOTIFICATIONS: UiNotification[] = [
+  {
+    id: 'n-1',
+    type: 'ATTENDANCE_BREACH',
+    title: 'Consecutive Absence Detected',
+    message: 'Usman Tariq (EMP-014) has not recorded a punch for 2 consecutive business days in Operations.',
+    severity: 'CRITICAL',
+    isRead: false,
+    timeAgo: '25m ago',
+  },
+  {
+    id: 'n-2',
+    type: 'OVERTIME_THRESHOLD',
+    title: 'Weekly Overtime Exceeded (11.5h)',
+    message: 'Bilal Hassan (EMP-002) logged 11.5 hours of overtime this week. Requires HR review.',
+    severity: 'WARNING',
+    isRead: false,
+    timeAgo: '1h ago',
+  },
+  {
+    id: 'n-3',
+    type: 'PAYROLL_SEALED',
+    title: 'September 2026 Payroll Period Finalized',
+    message: 'Super Admin locked payroll ledger. Total net disbursement of $118,240.50 authorized.',
+    severity: 'INFO',
+    isRead: true,
+    timeAgo: '5h ago',
+  },
+  {
+    id: 'n-4',
+    type: 'GATEWAY_OFFLINE',
+    title: 'Edge Gateway Telemetry Verified',
+    message: 'All 6 CCTV cameras and turnstiles in Lahore & Islamabad are reporting healthy RTSP streams.',
+    severity: 'INFO',
+    isRead: true,
+    timeAgo: '10h ago',
+  },
+];
+
 const INITIAL_EMPLOYEES: Employee[] = [
   { id: '1', code: 'EMP-001', name: 'Muhammad Ahmed', email: 'ahmed@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00' },
   { id: '2', code: 'EMP-002', name: 'Bilal Hassan', email: 'bilal@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', shift: '09:00 - 17:00' },
@@ -320,7 +482,7 @@ const INITIAL_TIMESHEETS: TimesheetRecord[] = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'agent' | 'payroll' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'devices' | 'voice' | 'agent' | 'payroll' | 'tasks' | 'reports' | 'audit'>('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [events, setEvents] = useState<AttendanceEvent[]>(INITIAL_EVENTS);
@@ -394,8 +556,26 @@ export default function App() {
   const [payslips, setPayslips] = useState<PayslipUiRecord[]>(INITIAL_PAYSLIPS);
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipUiRecord | null>(null);
   const [payrollPeriodStatus, setPayrollPeriodStatus] = useState<'DRAFT' | 'REVIEW' | 'LOCKED'>('REVIEW');
-  const [isPayrollRunning, setIsPayrollRunning] = useState<boolean>(false);
   const [payrollNotification, setPayrollNotification] = useState<string | null>(null);
+
+  // Tasks & Kanban State (Phase 8)
+  const [tasks, setTasks] = useState<KanbanTask[]>(INITIAL_TASKS);
+  const [selectedTaskProject, setSelectedTaskProject] = useState<string>('ALL');
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState<boolean>(false);
+  const [newTaskTitle, setNewTaskTitle] = useState<string>('');
+  const [newTaskDesc, setNewTaskDesc] = useState<string>('');
+  const [newTaskPriority, setNewTaskPriority] = useState<KanbanTask['priority']>('MEDIUM');
+  const [newTaskHours, setNewTaskHours] = useState<number>(8);
+  const [newTaskProject, setNewTaskProject] = useState<string>('PRJ-MOB');
+  const [newTaskAssignee, setNewTaskAssignee] = useState<string>('Muhammad Ahmed');
+
+  // Notifications State (Phase 10)
+  const [notifications, setNotifications] = useState<UiNotification[]>(INITIAL_NOTIFICATIONS);
+  const [isNotifTrayOpen, setIsNotifTrayOpen] = useState<boolean>(false);
+
+  // Reports & Analytics State (Phase 9)
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [selectedReportView, setSelectedReportView] = useState<'ATTENDANCE' | 'PAYROLL' | 'BRANCHES'>('ATTENDANCE');
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -771,6 +951,94 @@ export default function App() {
     setTimeout(() => setPayrollNotification(null), 6000);
   };
 
+  // Task & Kanban Handlers (Phase 8)
+  const handleMoveTask = (taskId: string, newStatus: KanbanTask['status']) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+  };
+
+  const handleCreateNewTask = () => {
+    if (!newTaskTitle.trim()) return;
+    const newTask: KanbanTask = {
+      id: `tsk-${Date.now()}`,
+      title: newTaskTitle.trim(),
+      description: newTaskDesc.trim() || 'Core milestone item',
+      projectId: newTaskProject,
+      projectName:
+        newTaskProject === 'PRJ-MOB'
+          ? 'Mobile Workforce PWA'
+          : newTaskProject === 'PRJ-CCTV'
+          ? 'AI Edge Computer Vision Gateways'
+          : newTaskProject === 'PRJ-VOICE'
+          ? 'Voice AI & Speech Ingress'
+          : 'Enterprise Payroll Engine',
+      status: 'TODO',
+      priority: newTaskPriority,
+      assigneeName: newTaskAssignee,
+      assigneePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      estimatedHours: Number(newTaskHours) || 8,
+      actualHours: 0,
+      dueDate: 'Sep 25, 2026',
+      attendanceVerified: true,
+    };
+    setTasks([newTask, ...tasks]);
+    setNewTaskTitle('');
+    setNewTaskDesc('');
+    setIsNewTaskModalOpen(false);
+  };
+
+  // Notification Handlers (Phase 10)
+  const handleMarkNotifRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+  };
+
+  const handleMarkAllNotifsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  // Report Export Handlers (Phase 9)
+  const handleExportReport = (format: 'CSV' | 'JSON' | 'PRINT') => {
+    if (format === 'PRINT') {
+      window.print();
+      return;
+    }
+    const filename = `executive_attendance_report_${Date.now()}.${format.toLowerCase()}`;
+    const content =
+      format === 'JSON'
+        ? JSON.stringify(
+            {
+              month: 'September 2026',
+              overallAttendanceRate: '91.8%',
+              punctualityIndex: '86.4%',
+              totalWorkedHours: 3640.5,
+              totalOvertimeHours: 142.0,
+              branchBreakdown: [
+                { branch: 'Lahore Head Office', rate: '93.2%', punctuality: '88.0%' },
+                { branch: 'Islamabad Regional Branch', rate: '89.4%', punctuality: '83.5%' },
+              ],
+            },
+            null,
+            2
+          )
+        : '"Metric","Value"\r\n"Month","September 2026"\r\n"Overall Attendance Rate","91.8%"\r\n"Punctuality Index","86.4%"\r\n"Total Worked Hours","3640.5"\r\n"Total Overtime Hours","142.0"\r\n"Lahore Attendance Rate","93.2%"\r\n"Islamabad Attendance Rate","89.4%"';
+
+    const blob = new Blob([content], {
+      type: format === 'JSON' ? 'application/json' : 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setExportNotice(`Exported ${filename} successfully.`);
+    setTimeout(() => setExportNotice(null), 4000);
+  };
+
   const getSourceIcon = (source: AttendanceEvent['source']) => {
     switch (source) {
       case 'CAMERA':
@@ -995,20 +1263,47 @@ export default function App() {
             <span>Compliance & Audit Logs</span>
           </button>
 
-          <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '16px 0' }} />
+          <button
+            onClick={() => setActiveTab('tasks')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              background: activeTab === 'tasks' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+              color: activeTab === 'tasks' ? '#38bdf8' : 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <CheckSquare style={{ width: '18px', height: '18px', color: '#38bdf8' }} />
+            <span>Tasks & Projects (Kanban)</span>
+          </button>
 
-          {/* Feature highlights for subsequent phases */}
-          <div style={{ padding: '0 8px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '8px' }}>
-            Modules Roadmap
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <CheckSquare style={{ width: '16px', height: '16px' }} />
-            <span>Task Management (Phase 8)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            <FileText style={{ width: '16px', height: '16px' }} />
-            <span>Advanced Reports & Audits (Phase 9)</span>
-          </div>
+          <button
+            onClick={() => setActiveTab('reports')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              background: activeTab === 'reports' ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+              color: activeTab === 'reports' ? '#fbbf24' : 'var(--text-secondary)',
+              textAlign: 'left',
+            }}
+          >
+            <BarChart3 style={{ width: '18px', height: '18px', color: '#fbbf24' }} />
+            <span>Reports & Analytics</span>
+          </button>
         </nav>
 
         {/* Tenant Profile Footer */}
