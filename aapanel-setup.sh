@@ -19,9 +19,20 @@ echo "  Directory: $APP_DIR"
 echo "=========================================================="
 
 echo "-> [0/3] Syncing latest code from GitHub main..."
+# Recursively unlock any aaPanel .user.ini immutable flags
+find "$APP_DIR" -name ".user.ini" -exec chattr -i {} + 2>/dev/null || true
 chattr -i "$APP_DIR/frontend/dist/.user.ini" 2>/dev/null || true
+chattr -i "$APP_DIR/.user.ini" 2>/dev/null || true
+
+# Ensure proper write permissions if running as root or with sudo
+if [ "$(id -u)" -eq 0 ]; then
+  chmod -R 777 "$APP_DIR/.git" 2>/dev/null || true
+  chmod -R 775 "$APP_DIR" 2>/dev/null || true
+fi
+
 git fetch origin main || true
 git reset --hard origin/main || git pull origin main || true
+
 
 # Create directories
 mkdir -p logs
