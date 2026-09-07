@@ -31,21 +31,30 @@ import {
   Lock,
   Bell,
   BarChart3,
-  Plus
+  Plus,
+  Edit2,
+  Trash2,
+  Settings,
+  Building2,
+  RefreshCw,
 } from 'lucide-react';
+import {
+  AddEditEmployeeModal,
+  EmployeeModel,
+} from './components/AddEditEmployeeModal';
+import { EmployeeEnrollmentModal } from './components/EmployeeEnrollmentModal';
+import {
+  HardwareSettingsModal,
+  HardwareDevice,
+  INITIAL_HARDWARE_DEVICES,
+} from './components/HardwareSettingsModal';
+import { AudibleUrduTaskManager } from './components/AudibleUrduTaskManager';
+import { ComprehensiveReportsHub } from './components/ComprehensiveReportsHub';
+import { PakistaniPayslipModal } from './components/PakistaniPayslipModal';
+import { DepartmentsManagerModal } from './components/DepartmentsManagerModal';
+import { computePakistaniSalary, formatPKR } from './utils/pakistanTax';
 
-interface Employee {
-  id: string;
-  code: string;
-  name: string;
-  email: string;
-  department: string;
-  branch: string;
-  designation: string;
-  status: 'ACTIVE' | 'ON_LEAVE' | 'SUSPENDED';
-  photo: string;
-  shift: string;
-}
+type Employee = EmployeeModel;
 
 interface AttendanceEvent {
   id: string;
@@ -371,17 +380,17 @@ const INITIAL_NOTIFICATIONS: UiNotification[] = [
 ];
 
 const INITIAL_EMPLOYEES: Employee[] = [
-  { id: '1', code: 'EMP-001', name: 'Muhammad Ahmed', email: 'ahmed@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00' },
-  { id: '2', code: 'EMP-002', name: 'Bilal Hassan', email: 'bilal@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', shift: '09:00 - 17:00' },
-  { id: '3', code: 'EMP-003', name: 'Ayesha Khan', email: 'ayesha@democompany.com', department: 'Human Resources', branch: 'Lahore Head Office', designation: 'HR Business Partner', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', shift: '09:00 - 17:00' },
-  { id: '4', code: 'EMP-004', name: 'Zainab Fatima', email: 'zainab@democompany.com', department: 'Human Resources', branch: 'Lahore Head Office', designation: 'HR Business Partner', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150', shift: '09:00 - 17:00' },
-  { id: '5', code: 'EMP-005', name: 'Hamza Tariq', email: 'hamza@democompany.com', department: 'Accounts & Finance', branch: 'Lahore Head Office', designation: 'Senior Financial Analyst', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150', shift: '09:00 - 17:00' },
-  { id: '6', code: 'EMP-006', name: 'Usman Ali', email: 'usman@democompany.com', department: 'Accounts & Finance', branch: 'Lahore Head Office', designation: 'Senior Financial Analyst', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150', shift: '09:00 - 17:00' },
-  { id: '7', code: 'EMP-007', name: 'Sana Malik', email: 'sana@democompany.com', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150', shift: '09:00 - 17:00' },
-  { id: '8', code: 'EMP-008', name: 'Omer Farooq', email: 'omer@democompany.com', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150', shift: '09:00 - 17:00' },
-  { id: '9', code: 'EMP-009', name: 'Khadija Noor', email: 'khadija@democompany.com', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', shift: '09:00 - 17:00' },
-  { id: '10', code: 'EMP-010', name: 'Mustafa Raza', email: 'mustafa@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150', shift: '09:00 - 17:00' },
-  { id: '11', code: 'EMP-011', name: 'Maryam Siddiqui', email: 'maryam@democompany.com', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ON_LEAVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00' },
+  { id: '1', code: 'EMP-001', name: 'Muhammad Ahmed', email: 'ahmed@democompany.com', phone: '0300-4521890', cnic: '35201-8932415-1', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 185000, overtimeEligible: true, bankIban: 'PK36SCBL0000001123456701', faceEnrolled: true, voiceEnrolled: true },
+  { id: '2', code: 'EMP-002', name: 'Bilal Hassan', email: 'bilal@democompany.com', phone: '0321-9874512', cnic: '35202-6541289-3', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 175000, overtimeEligible: true, bankIban: 'PK36HABB0000009988776602', faceEnrolled: true, voiceEnrolled: true },
+  { id: '3', code: 'EMP-003', name: 'Ayesha Khan', email: 'ayesha@democompany.com', phone: '0333-5612345', cnic: '35201-4478129-2', department: 'Human Resources', branch: 'Lahore Head Office', designation: 'HR Business Partner', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 145000, overtimeEligible: false, bankIban: 'PK36MEZN0000004455667703', faceEnrolled: true, voiceEnrolled: true },
+  { id: '4', code: 'EMP-004', name: 'Zainab Fatima', email: 'zainab@democompany.com', phone: '0345-8912345', cnic: '35201-1122334-4', department: 'Human Resources', branch: 'Lahore Head Office', designation: 'HR Business Partner', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 135000, overtimeEligible: false, bankIban: 'PK36BAHL0000003322114404', faceEnrolled: false, voiceEnrolled: false },
+  { id: '5', code: 'EMP-005', name: 'Hamza Tariq', email: 'hamza@democompany.com', phone: '0302-3344556', cnic: '35202-9988776-5', department: 'Accounts & Finance', branch: 'Lahore Head Office', designation: 'Senior Financial Analyst', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 155000, overtimeEligible: true, bankIban: 'PK36MCB0000005544332205', faceEnrolled: true, voiceEnrolled: true },
+  { id: '6', code: 'EMP-006', name: 'Usman Ali', email: 'usman@democompany.com', phone: '0315-7788990', cnic: '35202-7766554-1', department: 'Accounts & Finance', branch: 'Lahore Head Office', designation: 'Senior Financial Analyst', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 140000, overtimeEligible: true, bankIban: 'PK36UBL0000006677889906', faceEnrolled: true, voiceEnrolled: false },
+  { id: '7', code: 'EMP-007', name: 'Sana Malik', email: 'sana@democompany.com', phone: '0308-1122445', cnic: '61101-3344556-8', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 195000, overtimeEligible: true, bankIban: 'PK36UBL00000002233445507', faceEnrolled: true, voiceEnrolled: true },
+  { id: '8', code: 'EMP-008', name: 'Omer Farooq', email: 'omer@democompany.com', phone: '0334-2233445', cnic: '61101-4455667-9', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 165000, overtimeEligible: true, bankIban: 'PK36HABB0000008877665508', faceEnrolled: false, voiceEnrolled: true },
+  { id: '9', code: 'EMP-009', name: 'Khadija Noor', email: 'khadija@democompany.com', phone: '0322-9988112', cnic: '61101-8899112-4', department: 'Sales & BD', branch: 'Islamabad Regional Branch', designation: 'Regional Sales Manager', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 150000, overtimeEligible: false, bankIban: 'PK36MEZN0000001199882209', faceEnrolled: true, voiceEnrolled: false },
+  { id: '10', code: 'EMP-010', name: 'Mustafa Raza', email: 'mustafa@democompany.com', phone: '0300-8877665', cnic: '35201-5566778-3', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ACTIVE', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 160000, overtimeEligible: true, bankIban: 'PK36SCBL0000003344556610', faceEnrolled: true, voiceEnrolled: true },
+  { id: '11', code: 'EMP-011', name: 'Maryam Siddiqui', email: 'maryam@democompany.com', phone: '0345-4433221', cnic: '35202-2233445-6', department: 'Information Technology', branch: 'Lahore Head Office', designation: 'Senior Software Engineer', status: 'ON_LEAVE', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', shift: '09:00 - 17:00 (15m grace)', baseSalaryPkr: 155000, overtimeEligible: true, bankIban: 'PK36MEZN0000009988112211', faceEnrolled: false, voiceEnrolled: false },
 ];
 
 const INITIAL_EVENTS: AttendanceEvent[] = [
@@ -485,7 +494,170 @@ export default function App() {
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [events, setEvents] = useState<AttendanceEvent[]>(INITIAL_EVENTS);
-  const [employees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState<EmployeeModel[]>(INITIAL_EMPLOYEES);
+
+  // Modals & Enhanced Pakistani Features State
+  const [isAddEditEmployeeOpen, setIsAddEditEmployeeOpen] = useState<boolean>(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<EmployeeModel | null>(null);
+  const [isEnrollmentOpen, setIsEnrollmentOpen] = useState<boolean>(false);
+  const [selectedEnrollmentEmployee, setSelectedEnrollmentEmployee] = useState<EmployeeModel | null>(null);
+  const [isHardwareModalOpen, setIsHardwareModalOpen] = useState<boolean>(false);
+  const [hardwareDevices, setHardwareDevices] = useState<HardwareDevice[]>(INITIAL_HARDWARE_DEVICES);
+  const [isDepartmentsModalOpen, setIsDepartmentsModalOpen] = useState<boolean>(false);
+  const [isPakistaniPayslipOpen, setIsPakistaniPayslipOpen] = useState<boolean>(false);
+  const [selectedPayslipEmployee, setSelectedPayslipEmployee] = useState<EmployeeModel | null>(null);
+
+  // Departments & Designations Registry
+  const [departments, setDepartments] = useState<string[]>([
+    'Information Technology',
+    'Human Resources',
+    'Accounts & Finance',
+    'Sales & BD',
+    'Operations & Logistics',
+    'Production & Quality',
+  ]);
+  const [designationsByDept, setDesignationsByDept] = useState<Record<string, string[]>>({
+    'Information Technology': [
+      'Senior Software Engineer',
+      'Full Stack Architect',
+      'AI/ML Systems Specialist',
+      'DevOps & Cloud Lead',
+      'QA Automation Engineer',
+    ],
+    'Human Resources': [
+      'HR Business Partner',
+      'Talent Acquisition Lead',
+      'Payroll & Benefits Specialist',
+    ],
+    'Accounts & Finance': [
+      'Senior Financial Analyst',
+      'Chief Accountant',
+      'Corporate Tax Consultant (FBR)',
+    ],
+    'Sales & BD': [
+      'Regional Sales Manager',
+      'Enterprise Account Executive',
+      'Business Development Officer',
+    ],
+    'Operations & Logistics': [
+      'Logistics Operations Manager',
+      'Shift Turnstile Supervisor',
+      'Fleet & Asset Controller',
+    ],
+    'Production & Quality': [
+      'Production Line Lead',
+      'Quality Assurance Inspector',
+    ],
+  });
+
+  // Handlers for Employees
+  const handleSaveEmployee = (empData: EmployeeModel) => {
+    setEmployees((prev) => {
+      const idx = prev.findIndex((e) => e.id === empData.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = empData;
+        return updated;
+      }
+      return [empData, ...prev];
+    });
+  };
+
+  const handleDeleteEmployee = (empId: string) => {
+    if (confirm('Are you sure you want to deactivate and remove this employee profile?')) {
+      setEmployees((prev) => prev.filter((e) => e.id !== empId));
+    }
+  };
+
+  const handleEnrollmentComplete = (employeeId: string, updates: Partial<EmployeeModel>) => {
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === employeeId ? { ...e, ...updates } : e))
+    );
+  };
+
+  // Handlers for Departments
+  const handleAddDepartment = (deptName: string) => {
+    if (!departments.includes(deptName)) {
+      setDepartments((prev) => [...prev, deptName]);
+      setDesignationsByDept((prev) => ({
+        ...prev,
+        [deptName]: ['Associate'],
+      }));
+    }
+  };
+
+  const handleAddDesignation = (dept: string, desig: string) => {
+    setDesignationsByDept((prev) => {
+      const existing = prev[dept] || [];
+      if (!existing.includes(desig)) {
+        return { ...prev, [dept]: [...existing, desig] };
+      }
+      return prev;
+    });
+  };
+
+  const handleDeleteDepartment = (deptName: string) => {
+    setDepartments((prev) => prev.filter((d) => d !== deptName));
+  };
+
+  const handleDeleteDesignation = (dept: string, desig: string) => {
+    setDesignationsByDept((prev) => ({
+      ...prev,
+      [dept]: (prev[dept] || []).filter((d) => d !== desig),
+    }));
+  };
+
+  // Handlers for Hardware Devices
+  const handleAddHardwareDevice = (dev: HardwareDevice) => {
+    setHardwareDevices((prev) => [dev, ...prev]);
+  };
+
+  const handleDeleteHardwareDevice = (id: string) => {
+    setHardwareDevices((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handlePingHardwareDevice = (id: string) => {
+    setHardwareDevices((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, pingMs: Math.floor(8 + Math.random() * 15), lastHeartbeat: 'Just now' } : d))
+    );
+  };
+
+  // Handlers for Audible Urdu Tasks
+  const handleVoiceAddTask = (title: string, description: string = 'Created via Voice') => {
+    const newTask: KanbanTask = {
+      id: `tsk-${Date.now()}`,
+      title,
+      description,
+      projectId: 'PRJ-MOB',
+      projectName: 'Workforce Operations',
+      status: 'TODO',
+      priority: 'MEDIUM',
+      assigneeName: employees[0]?.name || 'Muhammad Ahmed',
+      assigneePhoto: employees[0]?.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      estimatedHours: 8,
+      actualHours: 0,
+      dueDate: 'Sep 25, 2026',
+      attendanceVerified: true,
+    };
+    setTasks((prev) => [newTask, ...prev]);
+  };
+
+  const handleVoiceRecordPunch = (action: 'CHECK_IN' | 'CHECK_OUT') => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const newEvent: AttendanceEvent = {
+      id: `ev-${Date.now()}`,
+      employeeName: employees[0]?.name || 'Muhammad Ahmed',
+      employeeCode: employees[0]?.code || 'EMP-001',
+      eventType: action,
+      source: 'VOICE',
+      time: timeStr,
+      branch: employees[0]?.branch || 'Lahore Head Office',
+      photo: employees[0]?.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      confidence: 0.98,
+    };
+    setEvents((prev) => [newEvent, ...prev]);
+  };
   const [timesheets] = useState<TimesheetRecord[]>(INITIAL_TIMESHEETS);
   const [expandedId, setExpandedId] = useState<string | null>('ts-1');
 
@@ -524,10 +696,6 @@ export default function App() {
   const [isSpoofSimulated, setIsSpoofSimulated] = useState<boolean>(false);
   const [faceScanStatus, setFaceScanStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [faceFeedback, setFaceFeedback] = useState<string | null>(null);
-  const [enrollingEmployee, setEnrollingEmployee] = useState<Employee | null>(null);
-  const [enrollmentAngle, setEnrollmentAngle] = useState<'FRONT' | 'LEFT' | 'RIGHT'>('FRONT');
-  const [enrollmentProgress, setEnrollmentProgress] = useState<number>(0);
-  const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
 
   // Voice Command & Audio Assistant State (Phase 5)
   const [voiceEmployeeId, setVoiceEmployeeId] = useState<string>('1');
@@ -552,7 +720,7 @@ export default function App() {
   const [isAgentThinking, setIsAgentThinking] = useState<boolean>(false);
 
   // Payroll Management State (Phase 7)
-  const [payslips, setPayslips] = useState<PayslipUiRecord[]>(INITIAL_PAYSLIPS);
+  const [, setPayslips] = useState<PayslipUiRecord[]>(INITIAL_PAYSLIPS);
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipUiRecord | null>(null);
   const [payrollPeriodStatus, setPayrollPeriodStatus] = useState<'DRAFT' | 'REVIEW' | 'LOCKED'>('REVIEW');
   const [isPayrollRunning, setIsPayrollRunning] = useState<boolean>(false);
@@ -572,9 +740,6 @@ export default function App() {
   // Notifications State (Phase 10)
   const [notifications, setNotifications] = useState<UiNotification[]>(INITIAL_NOTIFICATIONS);
   const [isNotifTrayOpen, setIsNotifTrayOpen] = useState<boolean>(false);
-
-  // Reports & Analytics State (Phase 9)
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   // Filter employees
   const filteredEmployees = employees.filter((emp) => {
@@ -746,32 +911,6 @@ export default function App() {
       setFaceFeedback(`VERIFIED: ${emp.name} (${emp.code}) identified with 98.4% confidence (Liveness 97.8% Live Human). CHECK_IN recorded.`);
       setTimeout(() => setFaceScanStatus('IDLE'), 4500);
     }, 1200);
-  };
-
-  const handleStartEnrollment = (emp: Employee) => {
-    setEnrollingEmployee(emp);
-    setEnrollmentProgress(25);
-    setEnrollmentAngle('FRONT');
-  };
-
-  const handleCaptureAngle = () => {
-    if (enrollmentAngle === 'FRONT') {
-      setEnrollmentProgress(60);
-      setEnrollmentAngle('LEFT');
-    } else if (enrollmentAngle === 'LEFT') {
-      setEnrollmentProgress(90);
-      setEnrollmentAngle('RIGHT');
-    } else {
-      setEnrollmentProgress(100);
-      setIsEnrolling(true);
-      setTimeout(() => {
-        setIsEnrolling(false);
-        const name = enrollingEmployee?.name;
-        setEnrollingEmployee(null);
-        setFaceFeedback(`Enrollment Complete: 512-dim normalized vector saved for ${name} (96.8% quality score). Synced to local edge gateways.`);
-        setTimeout(() => setFaceFeedback(null), 5000);
-      }, 900);
-    }
   };
 
   // Live Voice Command & Speech Attendance (Phase 5)
@@ -951,9 +1090,18 @@ export default function App() {
   };
 
   // Task & Kanban Handlers (Phase 8)
-  const handleMoveTask = (taskId: string, newStatus: KanbanTask['status']) => {
+  const handleAdvanceTaskStatus = (taskId: string) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const nextStatus: Record<KanbanTask['status'], KanbanTask['status']> = {
+          TODO: 'IN_PROGRESS',
+          IN_PROGRESS: 'IN_REVIEW',
+          IN_REVIEW: 'DONE',
+          DONE: 'DONE',
+        };
+        return { ...t, status: nextStatus[t.status] };
+      })
     );
   };
 
@@ -998,45 +1146,6 @@ export default function App() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  // Report Export Handlers (Phase 9)
-  const handleExportReport = (format: 'CSV' | 'JSON' | 'PRINT') => {
-    if (format === 'PRINT') {
-      window.print();
-      return;
-    }
-    const filename = `executive_attendance_report_${Date.now()}.${format.toLowerCase()}`;
-    const content =
-      format === 'JSON'
-        ? JSON.stringify(
-            {
-              month: 'September 2026',
-              overallAttendanceRate: '91.8%',
-              punctualityIndex: '86.4%',
-              totalWorkedHours: 3640.5,
-              totalOvertimeHours: 142.0,
-              branchBreakdown: [
-                { branch: 'Lahore Head Office', rate: '93.2%', punctuality: '88.0%' },
-                { branch: 'Islamabad Regional Branch', rate: '89.4%', punctuality: '83.5%' },
-              ],
-            },
-            null,
-            2
-          )
-        : '"Metric","Value"\r\n"Month","September 2026"\r\n"Overall Attendance Rate","91.8%"\r\n"Punctuality Index","86.4%"\r\n"Total Worked Hours","3640.5"\r\n"Total Overtime Hours","142.0"\r\n"Lahore Attendance Rate","93.2%"\r\n"Islamabad Attendance Rate","89.4%"';
-
-    const blob = new Blob([content], {
-      type: format === 'JSON' ? 'application/json' : 'text/csv;charset=utf-8;',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setExportNotice(`Exported ${filename} successfully.`);
-    setTimeout(() => setExportNotice(null), 4000);
-  };
 
   const getSourceIcon = (source: AttendanceEvent['source']) => {
     switch (source) {
@@ -1994,95 +2103,249 @@ export default function App() {
         {/* EMPLOYEES DIRECTORY TAB */}
         {activeTab === 'employees' && (
           <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Organization Staff Directory</h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                  Manage multi-branch workforce profiles, assigned shifts, biometric credentials, and security tokens.
+                  Complete employee lifecycle, Pakistani CNIC records, biometric face/voice enrollment, and department management.
                 </p>
               </div>
 
-              {/* Search input */}
-              <div style={{ position: 'relative', width: '320px' }}>
-                <Search style={{ position: 'absolute', left: '12px', top: '10px', width: '18px', height: '18px', color: 'var(--text-muted)' }} />
-                <input
-                  type="text"
-                  placeholder="Search by name, code or department..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Search input */}
+                <div style={{ position: 'relative', width: '260px' }}>
+                  <Search style={{ position: 'absolute', left: '12px', top: '10px', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search by name, code or CNIC..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '8px 12px 8px 36px',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDepartmentsModalOpen(true)}
                   style={{
-                    width: '100%',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '9px 16px',
                     borderRadius: '8px',
-                    padding: '8px 12px 8px 38px',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-elevated)',
                     color: '#fff',
                     fontSize: '0.85rem',
-                    outline: 'none',
+                    fontWeight: 600,
+                    cursor: 'pointer',
                   }}
-                />
+                >
+                  <Building2 style={{ width: '15px', height: '15px', color: '#818cf8' }} />
+                  <span>Departments & Titles</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmployeeToEdit(null);
+                    setIsAddEditEmployeeOpen(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '9px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  <span>+ Register New Employee</span>
+                </button>
               </div>
             </div>
 
             {/* Employee Table */}
-            <div className="glass-panel" style={{ overflow: 'hidden' }}>
+            <div className="glass-panel" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-                    <th style={{ padding: '14px 20px' }}>Employee</th>
-                    <th style={{ padding: '14px 20px' }}>Department</th>
-                    <th style={{ padding: '14px 20px' }}>Branch</th>
-                    <th style={{ padding: '14px 20px' }}>Shift Hours</th>
-                    <th style={{ padding: '14px 20px' }}>Status</th>
-                    <th style={{ padding: '14px 20px' }}>Credentials</th>
+                    <th style={{ padding: '14px 18px' }}>Staff Profile</th>
+                    <th style={{ padding: '14px 18px' }}>Pakistani CNIC</th>
+                    <th style={{ padding: '14px 18px' }}>Department & Designation</th>
+                    <th style={{ padding: '14px 18px' }}>Branch & Shift</th>
+                    <th style={{ padding: '14px 18px' }}>Monthly Base (PKR)</th>
+                    <th style={{ padding: '14px 18px' }}>Biometrics</th>
+                    <th style={{ padding: '14px 18px' }}>Status</th>
+                    <th style={{ padding: '14px 18px' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEmployees.map((emp) => (
                     <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s' }}>
-                      <td style={{ padding: '14px 20px' }}>
+                      <td style={{ padding: '14px 18px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <img
                             src={emp.photo}
                             alt={emp.name}
-                            style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(99, 102, 241, 0.4)' }}
                           />
                           <div>
                             <div style={{ fontWeight: 600, color: '#fff' }}>{emp.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{emp.code} • {emp.email}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              {emp.code} • {emp.phone || '0300-1234567'}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>{emp.department}</td>
-                      <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>{emp.branch}</td>
-                      <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>{emp.shift}</td>
-                      <td style={{ padding: '14px 20px' }}>
+
+                      <td style={{ padding: '14px 18px', color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                        {emp.cnic || '35201-1234567-1'}
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ color: '#fff', fontWeight: 500 }}>{emp.department}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{emp.designation}</div>
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ color: 'var(--text-secondary)' }}>{emp.branch}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{emp.shift}</div>
+                      </td>
+
+                      <td style={{ padding: '14px 18px', fontWeight: 700, color: '#10b981' }}>
+                        {formatPKR(emp.baseSalaryPkr || 120000)}
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <span
+                            className={emp.faceEnrolled ? 'badge badge-present' : 'badge badge-leave'}
+                            style={{ fontSize: '0.68rem', padding: '2px 6px' }}
+                            title={emp.faceEnrolled ? '512-dim Face Vector Enrolled' : 'Not Enrolled'}
+                          >
+                            Face {emp.faceEnrolled ? '✓' : '✗'}
+                          </span>
+                          <span
+                            className={emp.voiceEnrolled ? 'badge badge-present' : 'badge badge-leave'}
+                            style={{ fontSize: '0.68rem', padding: '2px 6px' }}
+                            title={emp.voiceEnrolled ? '128-dim Acoustic Voiceprint Active' : 'Not Enrolled'}
+                          >
+                            Voice {emp.voiceEnrolled ? '✓' : '✗'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
                         <span className={emp.status === 'ACTIVE' ? 'badge badge-present' : 'badge badge-leave'}>
                           {emp.status}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div
-                          style={{ display: 'flex', gap: '6px', cursor: 'pointer' }}
-                          onClick={() => setBadgeEmployee(emp)}
-                          title="Click to view Digital ID Card & Rotating QR"
-                        >
-                          <span style={{ padding: '4px 8px', background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '4px', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600 }}>
-                            QR Card
-                          </span>
-                          <span style={{ padding: '4px 8px', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '4px', color: '#fbbf24', fontSize: '0.75rem', fontWeight: 600 }}>
-                            Barcode
-                          </span>
-                          <span
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEnrollment(emp);
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedEnrollmentEmployee(emp);
+                              setIsEnrollmentOpen(true);
                             }}
-                            style={{ padding: '4px 8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '4px', color: '#34d399', fontSize: '0.75rem', fontWeight: 600 }}
-                            title="Enroll or Update 512-dim Biometric Face Vector"
+                            title="Enroll Webcam, RTSP IP Cam, Voiceprint, or QR Badge"
+                            style={{
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(16, 185, 129, 0.4)',
+                              background: 'rgba(16, 185, 129, 0.1)',
+                              color: '#34d399',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
                           >
-                            Face Enroll
-                          </span>
+                            <Camera style={{ width: '13px', height: '13px' }} />
+                            <span>Enroll</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedPayslipEmployee(emp);
+                              setIsPakistaniPayslipOpen(true);
+                            }}
+                            title="View Pakistani FBR Salary Slip"
+                            style={{
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(56, 189, 248, 0.4)',
+                              background: 'rgba(56, 189, 248, 0.1)',
+                              color: '#38bdf8',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <DollarSign style={{ width: '13px', height: '13px' }} />
+                            <span>Payslip</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmployeeToEdit(emp);
+                              setIsAddEditEmployeeOpen(true);
+                            }}
+                            title="Edit Employee Profile"
+                            style={{
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-subtle)',
+                              background: 'var(--bg-elevated)',
+                              color: '#fff',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Edit2 style={{ width: '13px', height: '13px' }} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEmployee(emp.id)}
+                            title="Deactivate Profile"
+                            style={{
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              color: '#f87171',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 style={{ width: '13px', height: '13px' }} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -2096,11 +2359,35 @@ export default function App() {
         {/* DEVICES & CCTV TAB */}
         {activeTab === 'devices' && (
           <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Biometrics, IP Cameras & Edge Surveillance Hub</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                Secure on-premise edge gateways ingest RTSP video on local LAN, extracting 512-dimensional face vectors and streaming verified punches without cloud video upload.
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Biometrics, IP Cameras & Edge Surveillance Hub</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+                  Secure on-premise edge gateways ingest RTSP video on local LAN, extracting 512-dimensional face vectors and streaming verified punches without cloud video upload.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsHardwareModalOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #38bdf8, #0284c7)',
+                  color: '#fff',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(56, 189, 248, 0.35)',
+                }}
+              >
+                <Settings style={{ width: '16px', height: '16px' }} />
+                <span>Hardware Settings ({hardwareDevices.length} Devices)</span>
+              </button>
             </div>
 
             {/* Live Biometric Webcam Kiosk (Phase 4) */}
@@ -3215,67 +3502,78 @@ export default function App() {
               </div>
             )}
 
-            {/* Top Metric Cards */}
+            {/* Top Metric Cards (PKR) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div className="glass-panel" style={{ padding: '18px' }}>
                 <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                  Total Gross Payroll
+                  Total Gross Payroll (PKR)
                 </div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
-                  $33,252.81
+                  Rs. 2,645,000
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>
-                  Basic + Allowances + Overtime
+                  Basic (60%) + House (25%) + Med (15%) + OT
                 </div>
               </div>
 
               <div className="glass-panel" style={{ padding: '18px' }}>
                 <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                  Net Payout Disbursed
+                  Net Take-Home Disbursed
                 </div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#10b981', marginTop: '6px' }}>
-                  $27,372.60
+                  Rs. 2,318,400
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Ready for Direct Bank Wire
+                  Direct 1Link Pakistani Bank Wire
                 </div>
               </div>
 
               <div className="glass-panel" style={{ padding: '18px' }}>
                 <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                  Progressive Tax Withheld
+                  FBR Withholding Tax (Sec 149)
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f59e0b', marginTop: '6px' }}>
-                  $4,531.88
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f87171', marginTop: '6px' }}>
+                  Rs. 184,200
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  Statutory 5-Bracket Tax Slabs
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Salaried Slabs 2024-2025
                 </div>
               </div>
 
               <div className="glass-panel" style={{ padding: '18px' }}>
                 <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-                  Approved Overtime Pay
+                  Statutory EOBI & PF
                 </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#38bdf8', marginTop: '6px' }}>
-                  $522.81
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fbbf24', marginTop: '6px' }}>
+                  Rs. 142,400
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  12.5 hrs @ 1.5x Hourly Rate
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  EOBI Rs. 370 + 5% Provident Fund
                 </div>
               </div>
             </div>
 
             {/* Payroll Batch Controls Card */}
-            <div className="glass-panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div
+              className="glass-panel"
+              style={{
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px',
+                borderLeft: '4px solid #10b981',
+              }}
+            >
               <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#fff' }}>September 2026 Monthly Payroll Cycle</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  Calculated from 22 active employees across Lahore HQ and Islamabad Tech Hub.
+                  Calculates all 22 employees with Pakistani FBR salary slabs, overtime multipliers, and automated deductions.
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   onClick={handleTriggerPayrollRun}
                   disabled={isPayrollRunning || payrollPeriodStatus === 'LOCKED'}
@@ -3284,7 +3582,7 @@ export default function App() {
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '10px 18px',
+                    padding: '10px 20px',
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     cursor: isPayrollRunning || payrollPeriodStatus === 'LOCKED' ? 'default' : 'pointer',
@@ -3292,9 +3590,10 @@ export default function App() {
                     alignItems: 'center',
                     gap: '8px',
                     opacity: payrollPeriodStatus === 'LOCKED' ? 0.5 : 1,
+                    boxShadow: payrollPeriodStatus === 'LOCKED' ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.35)',
                   }}
                 >
-                  <DollarSign style={{ width: '16px', height: '16px' }} />
+                  <RefreshCw style={{ width: '16px', height: '16px', animation: isPayrollRunning ? 'spin 1s linear infinite' : 'none' }} />
                   <span>{isPayrollRunning ? 'Calculating Batch...' : 'Recalculate Batch Run'}</span>
                 </button>
 
@@ -3324,9 +3623,9 @@ export default function App() {
             {/* Payslips Table */}
             <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Itemized Employee Payslips ({payslips.length})</h3>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Pakistani FBR Salaried Payslips ({filteredEmployees.length})</h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Statutory Deductions & Overtime Calculated
+                  Statutory Deductions (EOBI, PF, Withholding Tax) in PKR
                 </span>
               </div>
 
@@ -3335,67 +3634,69 @@ export default function App() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)' }}>
                       <th style={{ padding: '12px 14px' }}>Employee</th>
-                      <th style={{ padding: '12px 14px' }}>Department</th>
-                      <th style={{ padding: '12px 14px' }}>Basic Pay</th>
-                      <th style={{ padding: '12px 14px' }}>Allowances</th>
-                      <th style={{ padding: '12px 14px' }}>Overtime Pay</th>
-                      <th style={{ padding: '12px 14px' }}>Total Deductions</th>
+                      <th style={{ padding: '12px 14px' }}>Pakistani CNIC</th>
+                      <th style={{ padding: '12px 14px' }}>Base Package</th>
+                      <th style={{ padding: '12px 14px' }}>Basic (60%)</th>
+                      <th style={{ padding: '12px 14px' }}>Allowances (40%)</th>
+                      <th style={{ padding: '12px 14px' }}>FBR Tax (Mo.)</th>
+                      <th style={{ padding: '12px 14px' }}>EOBI & PF</th>
                       <th style={{ padding: '12px 14px' }}>Net Salary</th>
-                      <th style={{ padding: '12px 14px' }}>Status</th>
                       <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {payslips.map((ps) => (
-                      <tr
-                        key={ps.id}
-                        style={{
-                          borderBottom: '1px solid var(--border-subtle)',
-                          transition: 'background 0.15s ease',
-                        }}
-                      >
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ fontWeight: 600, color: '#fff' }}>{ps.employeeName}</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{ps.employeeCode} • {ps.designation}</div>
-                        </td>
-                        <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>{ps.department}</td>
-                        <td style={{ padding: '14px', color: '#fff', fontWeight: 500 }}>${ps.basicSalary.toLocaleString()}</td>
-                        <td style={{ padding: '14px', color: '#a5b4fc' }}>+${(ps.houseAllowance + ps.transportAllowance + ps.medicalAllowance).toLocaleString()}</td>
-                        <td style={{ padding: '14px', color: '#38bdf8' }}>
-                          +${ps.overtimePay.toFixed(2)}
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{ps.overtimeHours} hrs @ 1.5x</div>
-                        </td>
-                        <td style={{ padding: '14px', color: '#f87171' }}>
-                          -${ps.totalDeductions.toFixed(2)}
-                          {ps.attendancePenalty > 0 && (
-                            <div style={{ fontSize: '0.7rem', color: '#f59e0b' }}>-${ps.attendancePenalty.toFixed(2)} late penalty</div>
-                          )}
-                        </td>
-                        <td style={{ padding: '14px', fontWeight: 700, color: '#10b981', fontSize: '0.95rem' }}>
-                          ${ps.netSalary.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '14px' }}>
-                          <span className="badge badge-success">{ps.status}</span>
-                        </td>
-                        <td style={{ padding: '14px', textAlign: 'right' }}>
-                          <button
-                            onClick={() => setSelectedPayslip(ps)}
-                            style={{
-                              background: 'rgba(99, 102, 241, 0.15)',
-                              border: '1px solid rgba(99, 102, 241, 0.3)',
-                              color: '#a5b4fc',
-                              borderRadius: '6px',
-                              padding: '6px 12px',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            View Payslip
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredEmployees.map((emp) => {
+                      const breakdown = computePakistaniSalary(emp.baseSalaryPkr || 120000, 4.0, 0, 0);
+                      return (
+                        <tr
+                          key={emp.id}
+                          style={{
+                            borderBottom: '1px solid var(--border-subtle)',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <td style={{ padding: '14px' }}>
+                            <div style={{ fontWeight: 600, color: '#fff' }}>{emp.name}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{emp.code} • {emp.designation}</div>
+                          </td>
+                          <td style={{ padding: '14px', color: '#38bdf8', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                            {emp.cnic || '35201-1234567-1'}
+                          </td>
+                          <td style={{ padding: '14px', color: '#fff', fontWeight: 600 }}>{formatPKR(emp.baseSalaryPkr || 120000)}</td>
+                          <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>{formatPKR(breakdown.basicSalary)}</td>
+                          <td style={{ padding: '14px', color: '#a5b4fc' }}>+{formatPKR(breakdown.houseRentAllowance + breakdown.medicalUtilityAllowance)}</td>
+                          <td style={{ padding: '14px', color: '#f87171', fontWeight: 600 }}>
+                            -{formatPKR(breakdown.monthlyFbrTax)}
+                          </td>
+                          <td style={{ padding: '14px', color: '#fbbf24' }}>
+                            -Rs. {breakdown.eobiEmployeeShare + breakdown.providentFund}
+                          </td>
+                          <td style={{ padding: '14px', fontWeight: 800, color: '#10b981', fontSize: '0.95rem' }}>
+                            {formatPKR(breakdown.netSalary)}
+                          </td>
+                          <td style={{ padding: '14px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => {
+                                setSelectedPayslipEmployee(emp);
+                                setIsPakistaniPayslipOpen(true);
+                              }}
+                              style={{
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                color: '#34d399',
+                                borderRadius: '6px',
+                                padding: '6px 12px',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              FBR Payslip
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -3690,6 +3991,15 @@ export default function App() {
               </div>
             </div>
 
+            {/* Audible Voice Task Manager (Urdu & English) */}
+            <AudibleUrduTaskManager
+              onAddTask={handleVoiceAddTask}
+              onRecordPunch={handleVoiceRecordPunch}
+              tasksCount={tasks.length}
+              presentCount={presentCount}
+              lateCount={lateCount}
+            />
+
             {/* Attendance-to-Task Reconciliation Banner */}
             <div
               style={{
@@ -3818,57 +4128,54 @@ export default function App() {
                               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{task.projectName}</span>
                             </div>
 
-                            <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#fff', lineHeight: 1.3 }}>
+                            <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem', lineHeight: 1.4 }}>
                               {task.title}
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: 1.4 }}>
                               {task.description}
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <img
                                   src={task.assigneePhoto}
                                   alt={task.assigneeName}
-                                  style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
+                                  style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
                                 />
-                                <span style={{ color: '#fff' }}>{task.assigneeName}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  {task.assigneeName.split(' ')[0]}
+                                </span>
                               </div>
-                              <div style={{ color: 'var(--text-secondary)' }}>
-                                {task.actualHours}h / {task.estimatedHours}h
+
+                              <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>
+                                {task.actualHours} / {task.estimatedHours}h
                               </div>
                             </div>
 
-                            {/* Status Shift Controls */}
-                            <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                              {column.key !== 'TODO' && (
-                                <button
-                                  onClick={() => handleMoveTask(task.id, column.key === 'DONE' ? 'IN_REVIEW' : column.key === 'IN_REVIEW' ? 'IN_PROGRESS' : 'TODO')}
-                                  style={{
-                                    flex: 1,
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid var(--border-subtle)',
-                                    borderRadius: '6px',
-                                    color: 'var(--text-secondary)',
-                                    padding: '4px',
-                                    fontSize: '0.7rem',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  ← Back
-                                </button>
-                              )}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  color: task.attendanceVerified ? '#34d399' : '#fbbf24',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <CheckCircle2 style={{ width: '12px', height: '12px' }} />
+                                {task.attendanceVerified ? 'Verified' : 'Unverified'}
+                              </span>
+
                               {column.key !== 'DONE' && (
                                 <button
-                                  onClick={() => handleMoveTask(task.id, column.key === 'TODO' ? 'IN_PROGRESS' : column.key === 'IN_PROGRESS' ? 'IN_REVIEW' : 'DONE')}
+                                  onClick={() => handleAdvanceTaskStatus(task.id)}
                                   style={{
-                                    flex: 1,
-                                    background: 'rgba(56, 189, 248, 0.1)',
+                                    background: 'rgba(56, 189, 248, 0.15)',
                                     border: '1px solid rgba(56, 189, 248, 0.3)',
-                                    borderRadius: '6px',
                                     color: '#38bdf8',
-                                    padding: '4px',
-                                    fontSize: '0.7rem',
+                                    borderRadius: '6px',
+                                    padding: '4px 10px',
+                                    fontSize: '0.72rem',
                                     fontWeight: 600,
                                     cursor: 'pointer',
                                   }}
@@ -3889,172 +4196,15 @@ export default function App() {
         )}
 
         {/* ===================================================================
-            EXECUTIVE REPORTS & ANALYTICS HUB (PHASE 9)
+            EXECUTIVE REPORTS & ANALYTICS HUB (PHASE 9 - MULTI-MODULE)
             =================================================================== */}
         {activeTab === 'reports' && (
-          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {/* Header & Export Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ padding: '8px', background: 'rgba(245, 158, 11, 0.15)', borderRadius: '10px', color: '#fbbf24' }}>
-                    <BarChart3 style={{ width: '24px', height: '24px' }} />
-                  </div>
-                  <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff' }}>Executive Reports & Analytics Hub</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '2px' }}>
-                      Automated enterprise attendance compliance indices, punctuality trends, and instant export generators.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 1-Click Export Actions */}
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => handleExportReport('CSV')}
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Download style={{ width: '15px', height: '15px', color: '#34d399' }} />
-                  <span>Download CSV</span>
-                </button>
-
-                <button
-                  onClick={() => handleExportReport('JSON')}
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <FileText style={{ width: '15px', height: '15px', color: '#38bdf8' }} />
-                  <span>Download JSON</span>
-                </button>
-
-                <button
-                  onClick={() => handleExportReport('PRINT')}
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.35)',
-                  }}
-                >
-                  <Printer style={{ width: '15px', height: '15px' }} />
-                  <span>Print Executive Report</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Notification Banner */}
-            {exportNotice && (
-              <div
-                style={{
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  borderRadius: '10px',
-                  padding: '12px 18px',
-                  color: '#6ee7b7',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                <span>{exportNotice}</span>
-              </div>
-            )}
-
-            {/* Executive KPI Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-              <div className="glass-panel" style={{ padding: '20px' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Overall Attendance Rate</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', marginTop: '6px' }}>91.8%</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>+2.4% vs last month</div>
-              </div>
-              <div className="glass-panel" style={{ padding: '20px' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Punctuality Compliance Index</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#38bdf8', marginTop: '6px' }}>86.4%</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Excluding 15m grace window</div>
-              </div>
-              <div className="glass-panel" style={{ padding: '20px' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Worked Hours</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', marginTop: '6px' }}>3,640.5 hrs</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Reconciled across all punches</div>
-              </div>
-              <div className="glass-panel" style={{ padding: '20px' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Overtime Disbursed (1.5x)</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fbbf24', marginTop: '6px' }}>142.0 hrs</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>100% Manager Authorized</div>
-              </div>
-            </div>
-
-            {/* Branch Comparison Table */}
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Branch Operational Comparison</h3>
-                <span className="badge badge-info">September 2026 Cycle</span>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                    <th style={{ padding: '10px 14px' }}>Branch</th>
-                    <th style={{ padding: '10px 14px' }}>Branch Code</th>
-                    <th style={{ padding: '10px 14px' }}>Active Staff</th>
-                    <th style={{ padding: '10px 14px' }}>Attendance Rate</th>
-                    <th style={{ padding: '10px 14px' }}>Punctuality Rate</th>
-                    <th style={{ padding: '10px 14px' }}>Hardware Gateways</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#fff' }}>Lahore Head Office</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>LHR-01</td>
-                    <td style={{ padding: '12px 14px', color: '#fff' }}>14 Employees</td>
-                    <td style={{ padding: '12px 14px', color: '#34d399', fontWeight: 700 }}>93.2%</td>
-                    <td style={{ padding: '12px 14px', color: '#38bdf8', fontWeight: 700 }}>88.0%</td>
-                    <td style={{ padding: '12px 14px' }}><span className="badge badge-success">3 Online (RTSP)</span></td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#fff' }}>Islamabad Regional Branch</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>ISB-01</td>
-                    <td style={{ padding: '12px 14px', color: '#fff' }}>8 Employees</td>
-                    <td style={{ padding: '12px 14px', color: '#34d399', fontWeight: 700 }}>89.4%</td>
-                    <td style={{ padding: '12px 14px', color: '#38bdf8', fontWeight: 700 }}>83.5%</td>
-                    <td style={{ padding: '12px 14px' }}><span className="badge badge-success">3 Online (RTSP)</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div style={{ padding: '32px' }}>
+            <ComprehensiveReportsHub
+              employees={employees}
+              hardwareDevices={hardwareDevices}
+              selectedBranch={selectedBranch}
+            />
           </div>
         )}
 
@@ -4851,235 +5001,61 @@ export default function App() {
         </div>
       )}
 
-      {/* FACE BIOMETRIC ENROLLMENT MODAL (Phase 4) */}
-      {enrollingEmployee && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(5, 7, 15, 0.85)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-          onClick={() => setEnrollingEmployee(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(145deg, #131d27 0%, #0a0f18 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '20px',
-              width: '100%',
-              maxWidth: '480px',
-              padding: '28px',
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-            }}
-          >
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <ScanLine style={{ width: '22px', height: '22px', color: '#10b981' }} />
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
-                    Biometric Face Enrollment
-                  </h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                    Captures multi-angle facial landmarks and compiles normalized 512-dim mathematical template.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEnrollingEmployee(null)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                <X style={{ width: '16px', height: '16px' }} />
-              </button>
-            </div>
+      {/* Enhanced Modals */}
+      <AddEditEmployeeModal
+        isOpen={isAddEditEmployeeOpen}
+        onClose={() => {
+          setIsAddEditEmployeeOpen(false);
+          setEmployeeToEdit(null);
+        }}
+        onSave={handleSaveEmployee}
+        employeeToEdit={employeeToEdit}
+        departments={departments}
+        designationsByDept={designationsByDept}
+        branches={['Lahore Head Office', 'Islamabad Regional Branch', 'Karachi Hub']}
+        shifts={['09:00 - 17:00 (15m grace)', '08:00 - 16:00 (Standard)', '14:00 - 22:00 (Evening)']}
+      />
 
-            {/* Employee Preview */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-              }}
-            >
-              <img
-                src={enrollingEmployee.photo}
-                alt={enrollingEmployee.name}
-                style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981' }}
-              />
-              <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>{enrollingEmployee.name}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  {enrollingEmployee.code} • {enrollingEmployee.department} ({enrollingEmployee.branch})
-                </div>
-              </div>
-            </div>
+      <EmployeeEnrollmentModal
+        isOpen={isEnrollmentOpen}
+        onClose={() => {
+          setIsEnrollmentOpen(false);
+          setSelectedEnrollmentEmployee(null);
+        }}
+        employee={selectedEnrollmentEmployee}
+        onEnrollmentComplete={handleEnrollmentComplete}
+      />
 
-            {/* Multi-Angle Enrollment Stage */}
-            <div
-              style={{
-                background: '#040711',
-                borderRadius: '14px',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-                position: 'relative',
-              }}
-            >
-              <div
-                style={{
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '50%',
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src={enrollingEmployee.photo}
-                  alt="Capture Target"
-                  style={{
-                    width: '100px',
-                    height: '100px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    filter: enrollmentAngle === 'LEFT' ? 'brightness(0.9) contrast(1.1)' : enrollmentAngle === 'RIGHT' ? 'brightness(1.1)' : 'none',
-                    transform: enrollmentAngle === 'LEFT' ? 'rotate(-6deg)' : enrollmentAngle === 'RIGHT' ? 'rotate(6deg)' : 'none',
-                    transition: 'all 0.3s ease',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: '50%',
-                    border: '3px dashed #10b981',
-                    animation: isEnrolling ? 'spin 1s linear infinite' : 'none',
-                  }}
-                />
-              </div>
+      <HardwareSettingsModal
+        isOpen={isHardwareModalOpen}
+        onClose={() => setIsHardwareModalOpen(false)}
+        devices={hardwareDevices}
+        onAddDevice={handleAddHardwareDevice}
+        onDeleteDevice={handleDeleteHardwareDevice}
+        onPingDevice={handlePingHardwareDevice}
+      />
 
-              {/* Progress & Quality */}
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>
-                    Current Stage: <strong style={{ color: '#fff' }}>{enrollmentAngle === 'FRONT' ? '1/3 Frontal Face' : enrollmentAngle === 'LEFT' ? '2/3 Left 15° Angle' : '3/3 Right 15° Angle'}</strong>
-                  </span>
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>{enrollmentProgress}%</span>
-                </div>
-                <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${enrollmentProgress}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #10b981, #34d399)',
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                </div>
-              </div>
+      <DepartmentsManagerModal
+        isOpen={isDepartmentsModalOpen}
+        onClose={() => setIsDepartmentsModalOpen(false)}
+        departments={departments}
+        designationsByDept={designationsByDept}
+        onAddDepartment={handleAddDepartment}
+        onAddDesignation={handleAddDesignation}
+        onDeleteDepartment={handleDeleteDepartment}
+        onDeleteDesignation={handleDeleteDesignation}
+      />
 
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center' }}>
-                {enrollmentAngle === 'FRONT' && 'Look straight into the lens. Ensure even lighting.'}
-                {enrollmentAngle === 'LEFT' && 'Turn your head slightly to the left (15 degrees).'}
-                {enrollmentAngle === 'RIGHT' && 'Turn your head slightly to the right (15 degrees).'}
-              </div>
-            </div>
-
-            {/* Quality Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Dimensions</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>512 Floats</div>
-              </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>L2 Norm</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>1.0000 Unit</div>
-              </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Template Quality</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>96.8% (High)</div>
-              </div>
-            </div>
-
-            {/* Capture Button */}
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={handleCaptureAngle}
-                disabled={isEnrolling}
-                style={{
-                  flex: 1,
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  cursor: isEnrolling ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
-                }}
-              >
-                <ScanLine className="w-4 h-4" />
-                <span>
-                  {isEnrolling
-                    ? 'Saving & Syncing to Edge Gateways...'
-                    : enrollmentAngle === 'RIGHT'
-                    ? 'Finalize & Compile Face Vector'
-                    : `Capture ${enrollmentAngle === 'FRONT' ? 'Frontal Angle' : 'Left Angle'}`}
-                </span>
-              </button>
-              <button
-                onClick={() => setEnrollingEmployee(null)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '12px 18px',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PakistaniPayslipModal
+        isOpen={isPakistaniPayslipOpen}
+        onClose={() => {
+          setIsPakistaniPayslipOpen(false);
+          setSelectedPayslipEmployee(null);
+        }}
+        employee={selectedPayslipEmployee}
+        periodName="September 2026"
+      />
     </div>
   );
 }
+

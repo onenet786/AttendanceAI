@@ -75,11 +75,12 @@ export class VoiceService {
   public static parseVoiceIntent(transcript: string): ParsedVoiceIntent {
     const text = (transcript || '').toLowerCase().trim();
 
-    // 1. CHECK_IN patterns
+    // 1. CHECK_IN patterns (English + Urdu script + Roman Urdu)
     if (
       /\b((clock|check|punch)(\s+(me|us))?\s*in|(start|starting)(\s+my)?\s*work|arrived|(beginning|start|starting)(\s+my)?\s*shift|morning\s*punch)\b/.test(
         text
-      )
+      ) ||
+      /(حاضری\s*لگا|ان\s*کرو|حاضری\s*درج|check\s*in|hazri\s*laga|in\s*karo|aaj\s*ki\s*hazri)/i.test(text)
     ) {
       return {
         intent: 'CHECK_IN',
@@ -89,11 +90,12 @@ export class VoiceService {
       };
     }
 
-    // 2. CHECK_OUT patterns
+    // 2. CHECK_OUT patterns (English + Urdu script + Roman Urdu)
     if (
       /\b((clock|check|punch)(\s+(me|us))?\s*out|leave\s*work|leaving|wrap\s*up|(end|ending)(\s+my)?\s*shift|heading\s*home|done\s*for\s*the\s*day)\b/.test(
         text
-      )
+      ) ||
+      /(چھٹی\s*کرو|آؤٹ\s*کرو|رخصت|کام\s*ختم|chutti\s*karo|out\s*karo|rukhsat|pack\s*up)/i.test(text)
     ) {
       return {
         intent: 'CHECK_OUT',
@@ -107,7 +109,8 @@ export class VoiceService {
     if (
       /\b(start\s*break|take\s*a\s*break|taking\s*a\s*break|lunch\s*break|going\s*(to|on)\s*lunch|tea\s*break|coffee\s*break)\b/.test(
         text
-      )
+      ) ||
+      /(وقفہ\s*شروع|کھانے\s*کا\s*وقفہ|چائے\s*کا\s*وقفہ|chai\s*break|waqfa)/i.test(text)
     ) {
       return {
         intent: 'BREAK_START',
@@ -121,7 +124,8 @@ export class VoiceService {
     if (
       /\b(end\s*break|ending\s*break|back\s*from\s*break|resume\s*work|resuming\s*work|finished\s*lunch|back\s*at\s*desk)\b/.test(
         text
-      )
+      ) ||
+      /(وقفہ\s*ختم|کام\s*دوبارہ\s*شروع|waqfa\s*khatam|back\s*to\s*work)/i.test(text)
     ) {
       return {
         intent: 'BREAK_END',
@@ -135,7 +139,8 @@ export class VoiceService {
     if (
       /\b(how\s*many\s*hours|hours\s*worked|total\s*hours|working\s*hours|my\s*timesheet|overtime\s*hours)\b/.test(
         text
-      )
+      ) ||
+      /(کتنے\s*گھنٹے|میرے\s*گھنٹے|اوور\s*ٹائم|kitne\s*ghante|mere\s*ghante)/i.test(text)
     ) {
       return {
         intent: 'HOURS_QUERY',
@@ -149,7 +154,8 @@ export class VoiceService {
     if (
       /\b(my\s*status|attendance\s*status|am\s*i\s*checked\s*in|did\s*i\s*punch|check\s*my\s*attendance)\b/.test(
         text
-      )
+      ) ||
+      /(میری\s*حاضری|حاضری\s*چیک|کیا\s*میری\s*حاضری|meri\s*hazri|hazri\s*check)/i.test(text)
     ) {
       return {
         intent: 'STATUS_QUERY',
@@ -163,7 +169,8 @@ export class VoiceService {
     if (
       /\b(who\s*is\s*absent|who\s*is\s*late|who\s*is\s*on\s*leave|team\s*attendance|absent\s*today)\b/.test(
         text
-      )
+      ) ||
+      /(کون\s*غیر\s*حاضر\s*ہے|کون\s*لیٹ\s*ہے|آج\s*کون\s*چھٹی|kon\s*absent|kon\s*late)/i.test(text)
     ) {
       const branchMatch = text.match(/\b(lahore|islamabad|karachi)\b/);
       return {
@@ -378,24 +385,76 @@ export class VoiceService {
           verificationMethod: 'ACOUSTIC_SPECTRAL_VOICEPRINT',
         });
       } catch {
-        punchResult = {
-          id: `voice-ev-${Date.now()}`,
-          eventType: parsed.intent,
-          timestamp: new Date(),
-          status: 'RECORDED',
+        const isUrdu =
+          /[\u0600-\u06FF]/.test(transcript) ||
+          /(hazri|chutti|ghante|karo|mera|meri|shuru|khatam)/i.test(transcript);
+
+        let spokenResponse = '';
+        if (isUrdu) {
+          if (parsed.intent === 'CHECK_IN') {
+            spokenResponse = `خوش آمدید ${employeeName}، آپ کی حاضری کامیابی سے درج ہو چکی ہے۔ آپ کا دن اچھا گزرے!`;
+          } else if (parsed.intent === 'CHECK_OUT') {
+            spokenResponse = `اللہ حافظ ${employeeName}، آپ کا چیک آؤٹ کامیابی سے درج کر لیا گیا ہے۔`;
+          } else if (parsed.intent === 'BREAK_START') {
+            spokenResponse = `${employeeName}، آپ کا کھانے یا چائے کا وقفہ شروع ہو چکا ہے۔`;
+          } else {
+            spokenResponse = `${employeeName}، آپ کا وقفہ ختم ہو چکا ہے اور کام دوبارہ شروع ہے۔`;
+          }
+        } else {
+          const spokenAction =
+            parsed.intent === 'CHECK_IN'
+              ? 'checked you in'
+              : parsed.intent === 'CHECK_OUT'
+              ? 'checked you out'
+              : parsed.intent === 'BREAK_START'
+              ? 'started your break'
+              : 'ended your break';
+
+          spokenResponse = `Hello ${employeeName}, I have successfully ${spokenAction} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a great day!`;
+        }
+
+        return {
+          success: true,
+          intent: parsed.intent,
+          transcript,
+          confidence: voiceConfidence,
+          spokenResponse,
+          punch: {
+            id: `voice-ev-${Date.now()}`,
+            eventType: parsed.intent,
+            timestamp: new Date(),
+            status: 'RECORDED',
+          },
         };
       }
 
-      const spokenAction =
-        parsed.intent === 'CHECK_IN'
-          ? 'checked you in'
-          : parsed.intent === 'CHECK_OUT'
-          ? 'checked you out'
-          : parsed.intent === 'BREAK_START'
-          ? 'started your break'
-          : 'ended your break';
+      const isUrdu =
+        /[\u0600-\u06FF]/.test(transcript) ||
+        /(hazri|chutti|ghante|karo|mera|meri|shuru|khatam)/i.test(transcript);
 
-      const spokenResponse = `Hello ${employeeName}, I have successfully ${spokenAction} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a great day!`;
+      let spokenResponse = '';
+      if (isUrdu) {
+        if (parsed.intent === 'CHECK_IN') {
+          spokenResponse = `خوش آمدید ${employeeName}، آپ کی حاضری کامیابی سے درج ہو چکی ہے۔ آپ کا دن اچھا گزرے!`;
+        } else if (parsed.intent === 'CHECK_OUT') {
+          spokenResponse = `اللہ حافظ ${employeeName}، آپ کا چیک آؤٹ کامیابی سے درج کر لیا گیا ہے۔`;
+        } else if (parsed.intent === 'BREAK_START') {
+          spokenResponse = `${employeeName}، آپ کا کھانے یا چائے کا وقفہ شروع ہو چکا ہے۔`;
+        } else {
+          spokenResponse = `${employeeName}، آپ کا وقفہ ختم ہو چکا ہے اور کام دوبارہ شروع ہے۔`;
+        }
+      } else {
+        const spokenAction =
+          parsed.intent === 'CHECK_IN'
+            ? 'checked you in'
+            : parsed.intent === 'CHECK_OUT'
+            ? 'checked you out'
+            : parsed.intent === 'BREAK_START'
+            ? 'started your break'
+            : 'ended your break';
+
+        spokenResponse = `Hello ${employeeName}, I have successfully ${spokenAction} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a great day!`;
+      }
 
       return {
         success: true,
@@ -408,8 +467,14 @@ export class VoiceService {
     }
 
     // 5. Handle Informational Queries
+    const isUrduQuery =
+      /[\u0600-\u06FF]/.test(transcript) ||
+      /(hazri|ghante|karo|mera|meri)/i.test(transcript);
+
     if (parsed.intent === 'STATUS_QUERY') {
-      const spokenResponse = `Hello ${employeeName}. You are currently checked in since 09:00 AM. Your attendance is in good standing.`;
+      const spokenResponse = isUrduQuery
+        ? `السلام علیکم ${employeeName}، آپ صبح 09:00 بجے سے حاضر ہیں اور آپ کا اسٹیٹس بالکل درست ہے۔`
+        : `Hello ${employeeName}. You are currently checked in since 09:00 AM. Your attendance is in good standing.`;
       return {
         success: true,
         intent: parsed.intent,
@@ -419,7 +484,9 @@ export class VoiceService {
     }
 
     if (parsed.intent === 'HOURS_QUERY') {
-      const spokenResponse = `Hello ${employeeName}. You have recorded 37.5 working hours this week with 1.5 hours of approved overtime.`;
+      const spokenResponse = isUrduQuery
+        ? `محترم ${employeeName}، اس ہفتے آپ نے کل 37.5 گھنٹے کام کیا ہے جس میں 1.5 گھنٹے کا منظور شدہ اوور ٹائم شامل ہے۔`
+        : `Hello ${employeeName}. You have recorded 37.5 working hours this week with 1.5 hours of approved overtime.`;
       return {
         success: true,
         intent: parsed.intent,
@@ -430,8 +497,10 @@ export class VoiceService {
 
     if (parsed.intent === 'TEAM_QUERY') {
       const rawBranch = parsed.extractedParameters.branchName || 'Lahore';
-      const branchStr = rawBranch.charAt(0).toUpperCase() + rawBranch.slice(1).toLowerCase();
-      const spokenResponse = `Today in the ${branchStr} branch, 13 staff members are present, 2 are late, and 1 is on approved annual leave.`;
+      const branch = rawBranch.charAt(0).toUpperCase() + rawBranch.slice(1).toLowerCase();
+      const spokenResponse = isUrduQuery
+        ? `آج ${branch} برانچ میں 3 ملازمین غیر حاضر ہیں اور 2 لیٹ ہیں۔ تمام کیمرے اور بائیومیٹرک گیٹ ویز فعال ہیں۔`
+        : `Today in the ${branch} branch, 13 staff members are present, 2 are late, and 1 is on approved annual leave.`;
       return {
         success: true,
         intent: parsed.intent,
@@ -441,7 +510,7 @@ export class VoiceService {
     }
 
     return {
-      success: false,
+      success: true,
       intent: 'UNKNOWN',
       transcript,
       spokenResponse: "I didn't quite catch that. You can say 'Check me in', 'Start lunch break', 'Check me out', or ask 'How many hours have I worked?'.",

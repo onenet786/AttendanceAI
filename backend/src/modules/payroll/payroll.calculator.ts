@@ -61,7 +61,7 @@ export class PayrollCalculator {
   }
 
   /**
-   * Progressive monthly income tax bracket calculation
+   * Progressive monthly income tax bracket calculation (Default USD baseline)
    * Bracket 1: $0 - $1,000      -> 0%
    * Bracket 2: $1,001 - $2,500  -> 5% of excess over $1,000
    * Bracket 3: $2,501 - $5,000  -> $75 + 12.5% of excess over $2,500
@@ -84,6 +84,58 @@ export class PayrollCalculator {
     } else {
       return Number((1512.5 + (monthlyTaxableGross - 10000) * 0.35).toFixed(2));
     }
+  }
+
+  /**
+   * Official Pakistani FBR Income Tax Slabs for Salaried Individuals (Tax Year 2024-2025 / 2025-2026)
+   * Computed based on Annual Taxable Gross divided by 12 for monthly payroll deduction.
+   * - Slab 1: Up to Rs. 600,000/yr (Rs. 50,000/mo) -> 0%
+   * - Slab 2: Rs. 600,001 - 1,200,000/yr -> 5% of amount exceeding Rs. 600,000
+   * - Slab 3: Rs. 1,200,001 - 2,200,000/yr -> Rs. 30,000 + 15% of amount exceeding Rs. 1,200,000
+   * - Slab 4: Rs. 2,200,001 - 3,200,000/yr -> Rs. 180,000 + 25% of amount exceeding Rs. 2,200,000
+   * - Slab 5: Rs. 3,200,001 - 4,100,000/yr -> Rs. 430,000 + 30% of amount exceeding Rs. 3,200,000
+   * - Slab 6: Above Rs. 4,100,000/yr -> Rs. 700,000 + 35% of amount exceeding Rs. 4,100,000
+   */
+  static calculatePakistaniFbrTax(monthlyGross: number): { monthlyTax: number; annualTax: number; slab: string } {
+    const annualGross = Math.max(0, monthlyGross * 12);
+    let annualTax = 0;
+    let slab = 'Slab 1: Up to PKR 600,000 (0%)';
+
+    if (annualGross <= 600000) {
+      annualTax = 0;
+      slab = 'Slab 1: Up to PKR 600,000 (0%)';
+    } else if (annualGross <= 1200000) {
+      annualTax = (annualGross - 600000) * 0.05;
+      slab = 'Slab 2: PKR 600,001 to 1,200,000 (5%)';
+    } else if (annualGross <= 2200000) {
+      annualTax = 30000 + (annualGross - 1200000) * 0.15;
+      slab = 'Slab 3: PKR 1,200,001 to 2,200,000 (Rs. 30,000 + 15%)';
+    } else if (annualGross <= 3200000) {
+      annualTax = 180000 + (annualGross - 2200000) * 0.25;
+      slab = 'Slab 4: PKR 2,200,001 to 3,200,000 (Rs. 180,000 + 25%)';
+    } else if (annualGross <= 4100000) {
+      annualTax = 430000 + (annualGross - 3200000) * 0.30;
+      slab = 'Slab 5: PKR 3,200,001 to 4,100,000 (Rs. 430,000 + 30%)';
+    } else {
+      annualTax = 700000 + (annualGross - 4100000) * 0.35;
+      slab = 'Slab 6: Above PKR 4,100,000 (Rs. 700,000 + 35%)';
+    }
+
+    const monthlyTax = Number((annualTax / 12).toFixed(2));
+    return {
+      monthlyTax,
+      annualTax: Number(annualTax.toFixed(2)),
+      slab,
+    };
+  }
+
+  /**
+   * Statutory Pakistani EOBI (Employees' Old-Age Benefits Institution) contribution
+   * Standard employee share: PKR 370/month (Employer pays PKR 1,850/month)
+   */
+  static calculateEobi(basicSalary: number): number {
+    if (basicSalary <= 0) return 0;
+    return 370; // Standard fixed statutory employee share in PKR
   }
 
   /**
