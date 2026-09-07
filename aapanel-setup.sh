@@ -70,10 +70,17 @@ npm run seed || echo "Seed notice: Schema ready"
 
 cd "$APP_DIR"
 
+# Restart process if PM2 is active
+if command -v pm2 &> /dev/null; then
+  echo "-> Reloading PM2 process..."
+  pm2 reload attendance-ai 2>/dev/null || pm2 restart attendance-ai 2>/dev/null || pm2 restart all 2>/dev/null || true
+fi
+
 echo ""
 echo "=========================================================="
 echo "  INITIALIZATION FINISHED SUCCESSFULLY!"
 echo "  1. Backend build ready: backend/dist/server.js (Port 3041)"
-echo "  2. Frontend build ready: frontend/dist"
-echo "  You can now start the Node project in aaPanel UI!"
+echo "  2. Frontend UI embedded & ready: frontend/dist"
+echo "  3. Root domain http://app.binishaqsoft.com will now serve the Web App!"
 echo "=========================================================="
+

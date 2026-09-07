@@ -1,4 +1,6 @@
-import express, { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -8,6 +10,23 @@ import swaggerUi from 'swagger-ui-express';
 import { prisma } from './lib/prisma.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { sendResponse } from './common/response.js';
+
+// Detect Frontend Build Path
+const possibleDistPaths = [
+  path.resolve(process.cwd(), '../frontend/dist'),
+  path.resolve(process.cwd(), 'frontend/dist'),
+  path.resolve(process.cwd(), '../../frontend/dist'),
+  '/www/wwwroot/attendance-ai/frontend/dist',
+];
+
+let frontendDistPath: string | null = null;
+for (const p of possibleDistPaths) {
+  if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
+    frontendDistPath = p;
+    break;
+  }
+}
+
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes.js';
@@ -174,7 +193,43 @@ app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 
-// 404 Route Handler
+// Static Frontend Web Assets & Favicon
+if (frontendDistPath) {
+  app.use(express.static(frontendDistPath));
+}
+
+app.get('/favicon.ico', (_req: Request, res: Response) => {
+  if (frontendDistPath && fs.existsSync(path.join(frontendDistPath, 'favicon.ico'))) {
+    return res.sendFile(path.join(frontendDistPath, 'favicon.ico'));
+  }
+  return res.status(204).end();
+});
+
+// Single Page Application (SPA) HTML fallback for non-API web browsing
+app.get('*', (req: Request, res: Response, next: NextFunction) => {
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/health') ||
+    req.path.startsWith('/socket.io')
+  ) {
+    return next();
+  }
+
+  if (frontendDistPath && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
+    return res.sendFile(path.join(frontendDistPath, 'index.html'));
+  }
+
+  return res.json({
+    success: true,
+    service: 'AttendanceAI Enterprise Engine',
+    version: '1.0.0',
+    status: 'ONLINE',
+    docs: '/api/v1/docs',
+    health: '/health',
+  });
+});
+
+// 404 Route Handler for unmatched API endpoints
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
